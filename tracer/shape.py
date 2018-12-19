@@ -90,3 +90,71 @@ class Plane(Shape):
     dir_reflected = normalize(end - intersection)
 
     return intersection, dir_grazing, dir_reflected
+  
+
+
+
+from itertools import count
+
+class Ray:
+
+  id_ = count()
+
+  def __init__(self, start, direction=None, end=None, length=0,
+                force_geometry=False, rtype='primary'):
+    """ Base class for rays object, containing all necessary geometrical 
+    paramters required by a tracer. A ray is represented as a 3-vector 
+    impelemented by numpy.ndarray object with starting, or initial, point 
+    specified (also numpy.ndarray).
+
+    Args:
+      start     (numpy.ndarray) - the starting point of a ray.
+      direction (numpy.ndarray, optional) - the direction of a ray.
+      end       (numpy.ndarray, optional) - the ending point of a ray.
+      length    (float, optional) - the lenght of a ray, i.e. the lenght of the 
+              vector equaling `end` - `start`.
+  
+      force_geometry (bool, optional) - enforce ray geometry computation when
+              not all geometrical parameters are specified.
+      
+      rtype (obj:`str`, optional) - a type of a ray
+    
+    Raises:
+      obj:`ValueError` - in case of contrudiction between the parameters given 
+              when `force_geometry` is set to `True`.
+    """
+    self.start = start
+    self.direction = direction
+    self.end = end
+    self.length = length
+
+    if force_geometry:
+      self._compute_ray_geometry()
+    
+    self.id = next(Ray.id_)
+    self.rtype = rtype
+
+
+  def _compute_ray_geometry(self):
+    """ Compute missed parameters and raises `ValueError` if they are not 
+    specified properly or they contrudict to each other """
+
+    if self.end is None and (self.direction is None or self.length == 0):
+      raise ValueError(
+        '`end` or a pair `direction` should `length` should be specified')
+    
+    if self.end is None:
+      self.direction = normalize(self.direction)
+      self.end = self.start + self.direction * self.length
+    
+    if self.direction is None:
+      self.direction = normalize(self.end - self.start)
+      
+      if numpy.abs(self._compute_length() - self.length) < TOLERANCE:
+        raise ValueError('`length` does not match `start` and `end`')
+
+    
+  
+
+  def _compute_length(self):
+    return lin.norm(self.end - self.start)
