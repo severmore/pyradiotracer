@@ -1,48 +1,85 @@
 import numpy
 from numpy import linalg as lin
+from itertools import count
 
-
-TOLERANCE = 1e-6
-INFTY = vec3d(numpy.inf, numpy.inf, numpy.inf)
-
-# Geometry utilities
-def vec3d(x, y, z):
-  return numpy.array([x, y, z])
-
-def normalize(x):
-  norm = lin.norm(x)
-  return x / norm if norm > TOLERANCE else vec3d(0., 0., 0.)
+from radiotracer import utils
+normalize = utils.normalize
+TOLERANCE = utils.TOLERANCE
+Singleton = utils.Singleton
+zero = utils.zero
 
 
 class Shape:
   
   def normal(self, point=None):
     """ Returns normal to the shape at a `point` """
-    pass
+    raise NotImplementedError('Normal is not defined for an abstarct shape')
   
+  def is_intersected(self, start, direction):
+    """ Check whether a ray specified by its `start` and `direction` crosses
+    the plane """
+    raise NotImplementedError(
+      'Intersection is not defined for an abstarct shape')
   
+  def intersection(self, start, direction, end=None):
+    """ Returns an intersection point of a ray specified by its `start` 
+    and `direction` with the plane """
+    raise NotImplementedError(
+      'Intersection is not defined for an abstarct shape')
+
+
+class Empty(Shape, metaclass=Singleton):
+  """ An empty shape """
+  def __str__(self):
+    return repr(self)
+  
+  def __repr__(self):
+    return f'{self.__class__.__name__}()'
+
+  def normal(self, point=None): 
+    return zero
+  
+  def is_intersect(self, start, direction):
+    return False
+
+  def is_shadowed(self, start, end):
+    return False
+
+  def intersect(self, start, end):
+    return end
+
+
+
 class Plane(Shape):
     
-  def __init__(self, init_point, normal, **kwargs):
+  def __init__(self, init_point, normal):
     self._point = init_point
     self._normal = normalize(normal)
 
+  def __str__(self):
+    return repr(self)
+  
+  def __repr__(self):
+    return f'{self.__class__.__name__}(i:{self._point} n:{self._normal})'
+
   def normal(self, point=None):
     """ Returns normal to the shape at a `point` """
-    return self.normal
+    return self._normal
 
 
   def _distance_to(self, point):
     """ A signed distance between a `point` and the plane; a positive value 
     means the normal directed to the same semi-plane as a point to be, negative 
-    - an oposite semi-plane """
+    - an oposite semi-plane 
+    """
     return numpy.dot(point - self._point, self._normal)
 
   def _intersection_fraction(self, start, direction):
     """ Return the coeffient for an intersection point computation; an infinity
     value means orthogonality of `direction` and a plane normal, a negative 
     value mean a ray specified by `start` and `direction is directed in 
-    opposition to the plane, thus in both cases there is no intersection """
+    opposition to the plane, thus in both cases there is no intersection 
+    """
     denom = numpy.dot(direction, self._normal)
     if numpy.abs(denom) < TOLERANCE:
         return numpy.inf
@@ -61,9 +98,16 @@ class Plane(Shape):
     the plane """
     return self._intersection_fraction(start, direction) != numpy.infty
 
-  def intersection(self, start, direction):
+  def is_shadowed(self, start, end):
+    """ Check whether 'self' shadows the ray at a segement start - end. """
+    tau = self._intersection_fraction(start, end - start)
+    # print('[si_shadowed]', self, start, end, tau, tau >= 0 and tau <= 1, flush=True)
+    return tau >= 0 and tau <= 1
+
+  def intersect(self, start, end):
     """ Returns an intersection point of a ray specified by its `start` 
     and `direction` with the plane """
+    direction = end - start
     tau = self._intersection_fraction(start, direction)
     return start + tau * direction
 
@@ -90,11 +134,11 @@ class Plane(Shape):
     dir_reflected = normalize(end - intersection)
 
     return intersection, dir_grazing, dir_reflected
-  
 
 
+def build(params):
+  return [Plane(utils.vec3d(*i), utils.vec3d(*n)) for i, n in params.items()]
 
-from itertools import count
 
 class Ray:
 
@@ -141,7 +185,8 @@ class Ray:
 
     if self.end is None and (self.direction is None or self.length == 0):
       raise ValueError(
-        '`end` or a pair `direction` should `length` should be specified')
+        '`end` or a pair `direction` should `length` should be specified'
+      )
     
     if self.end is None:
       self.direction = normalize(self.direction)
@@ -150,11 +195,15 @@ class Ray:
     if self.direction is None:
       self.direction = normalize(self.end - self.start)
       
-      if numpy.abs(self._compute_length() - self.length) < TOLERANCE:
+      if numpy.abs(self._compute_length() - self.length) > TOLERANCE:
         raise ValueError('`length` does not match `start` and `end`')
-
-    
-  
 
   def _compute_length(self):
     return lin.norm(self.end - self.start)
+
+
+if __name__ == '__main__':
+  e1 = Empty()
+  e2 = Empty()
+
+  print(e1 is e2)

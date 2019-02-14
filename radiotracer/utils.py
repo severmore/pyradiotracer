@@ -1,3 +1,15 @@
+import numpy
+from numpy.linalg import norm
+
+TOLERANCE = 1e-6
+
+class Singleton(type):
+  _instances = {}
+  def __call__(cls, *args, **kwargs):
+    if cls not in cls._instances:
+      cls._instances[cls] = super().__call__(*args, **kwargs)
+    return cls._instances[cls]
+
 class ProgressBar:
 
   def __init__(self, total, prefix='', suffix='', 
@@ -36,75 +48,24 @@ class ProgressBar:
       print()
 
 
-class Id:
+def reversed_enumerate(sequence): 
+  return zip(range(len(sequence) - 1, -1, -1), reversed(sequence))
 
-  __gen = None
 
-  @staticmethod
-  def next():
-    if Id.__gen is None:
-      Id.__gen = Id._new_gen(0)
-    return next(Id.__gen)
+####################
+# Geometry utulities
+####################
+
+vec3d = lambda x, y, z: numpy.array([float(x), float(y), float(z)])
+
+def normalize(x, tolerance=TOLERANCE):
+  n = length(x)
+  return x / n if n > tolerance else zero
+
+def length(x):
+  return norm(x)
+
+zero = vec3d(0.,0.,0.)
+inf  = vec3d(numpy.inf, numpy.inf, numpy.inf)
+
   
-  @staticmethod
-  def reset(start=0):
-    Id.__gen = Id._new_gen(start)
-  
-  @staticmethod
-  def _new_gen(start):
-    _id = start
-    while True:
-      yield _id
-      _id += 1
-
-
-class ID:
-  __instance = None
-  __gen = None
-  __start = 0
-
-  def __new__(cls):
-    if ID.__instance is None:
-      ID.__instance = super().__new__(cls)
-    return ID.__instance
-  
-  def __init__(self, start=0):
-    if ID.__gen is None:
-      ID.__gen = self._new_gen(start)
-      ID.__start = start
-
-  def __next__(self):
-    return next(ID.__gen)
-  
-  def reset(self, start=None):
-    if start is not None:
-      ID.__start = start
-    ID.__gen = self._new_gen(start)
-
-  def _new_gen(self, start):
-    _id = start
-    while True:
-      yield _id
-      _id += 1
-
-if __name__ == "__main__":
-  # from time import sleep
-  # total = 100
-  # bar = ProgressBar(total)
-  # for i in range(total):
-  #   sleep(4 / total)
-  #   bar.show(i)
-
-  # for _ in range(10):
-  #   print(Id.next())
-  
-  # Id.reset(5)
-
-  # print(Id.next())
-  # print(Id.next())
-
-  for _ in range(10):
-    print(next(ID()))
-  
-  ID().reset(5)
-  print(next(ID()))
