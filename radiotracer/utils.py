@@ -10,6 +10,7 @@ class Singleton(type):
       cls._instances[cls] = super().__call__(*args, **kwargs)
     return cls._instances[cls]
 
+
 class ProgressBar:
 
   def __init__(self, total, prefix='', suffix='', 
@@ -55,8 +56,11 @@ def reversed_enumerate(sequence):
 ####################
 # Geometry utulities
 ####################
+def vec3d(x, y, z):
+  return numpy.array([float(x), float(y), float(z)])
 
-vec3d = lambda x, y, z: numpy.array([float(x), float(y), float(z)])
+def vec3d_sequnced(sequence):
+  return vec3d(*sequence)
 
 def normalize(x, tolerance=TOLERANCE):
   n = length(x)
@@ -69,3 +73,17 @@ zero = vec3d(0.,0.,0.)
 inf  = vec3d(numpy.inf, numpy.inf, numpy.inf)
 
   
+
+########################
+# PRINTING ROUTINS
+########################
+_p_color = lambda s, c: f'\x1b[{c}m{s}\x1b[0m'
+p_red    = lambda s: _p_color(s, 31)
+p_green  = lambda s: _p_color(s, 32)
+p_yellow = lambda s: _p_color(s, 33)
+p_blue   = lambda s: _p_color(s, 34)
+p_turq   = lambda s: _p_color(s, 36)
+
+def view(path, sep='->'):
+  """ Forms string representation of path. """
+  return sep.join([str(point) for point in path])

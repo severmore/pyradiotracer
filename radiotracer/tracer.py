@@ -6,17 +6,16 @@ inf = utils.inf
 reversed_enumerate = utils.reversed_enumerate
 _SHADOWING_INDENT = .99999
 
+# coloring routines
+p_red    = utils.p_red    
+p_green  = utils.p_green  
+p_yellow = utils.p_yellow 
+p_blue   = utils.p_blue   
+p_turq   = utils.p_turq
 
+view = utils.view
 
-# print routines
-p_color = lambda s, c: f'\x1b[{c}m{s}\x1b[0m'
-p_red    = lambda s: p_color(s, 31)
-p_green  = lambda s: p_color(s, 32)
-p_yellow  = lambda s: p_color(s, 33)
-p_blue   = lambda s: p_color(s, 34)
-p_turq = lambda s: p_color(s, 36)
-
-### DELETE AFTER
+ 
 
 class Tracer:
   """ Image reflection method """
@@ -30,7 +29,7 @@ class Tracer:
     self.scene[numpy.inf] = shape.Empty()
     # print(scene, self.scene)
   
-  def run(self, tx, rx, max_reflections=2):
+  def __call__(self, tx, rx, max_reflections=2):
     """ Build rays pathes from `tx` to `rx` with at most `reflection_num` 
     reflections.
     """
@@ -42,12 +41,10 @@ class Tracer:
         print(f'{p_green("[run]")} tracing {p_green(k)} reflections, shapes {p_green([self.scene[sid] for sid in sid_sequence])}')
 
         path = self.trace_path(tx, rx, sid_sequence)
-        self._paths.append(path)
-        
         if path:
-          print(f'{p_green("[run]")} traced path for {p_green(k)} reflections is {p_green("->".join([str(p) for p in path]))}')
+          self._paths.append(path)
+          print(f'{p_green("[run]")} traced path for {p_green(k)} reflections is {p_green(view(path))}')
 
-    self._paths = filter(None, self._paths)
     return self._paths
 
 
@@ -95,7 +92,7 @@ class Tracer:
       print(f'[_i_compute_ray_path] intersection point is {p_blue(i_point)}', flush=True)
       if numpy.array_equal(i_point, inf) or self.is_shadowed(start, i_point):
         print('Is it really true?', p_red(True))
-        return
+        return None
       
       start = i_point
       path.append(i_point)
@@ -110,23 +107,23 @@ class Tracer:
     return any(shape.is_shadowed(start, end) for shape in self.scene.values())
 
 
-
 if __name__ == '__main__':
   
-  tracer = Tracer(
+  tracer_ = Tracer(
     shape.build({
       (0,0, 0): (0,0,1),
-      (0,0,10): (0,0,-1),
+      (0,0,-10): (0,0,1),
     })
   )
 
   print(f'starting tracing from {utils.vec3d(0,0,5)} to {utils.vec3d(0,10,5)}')
   
-  paths = tracer.run(
+  paths = tracer_(
     utils.vec3d(0,0,5), 
     utils.vec3d(0,10,5), 
     max_reflections=3
   )
 
+
   for p in paths:
-    print(p_green(len(p) - 2), p)
+    print(p_green(len(p) - 2), view(p))

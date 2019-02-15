@@ -109,7 +109,8 @@ class Plane(Shape):
     and `direction` with the plane """
     direction = end - start
     tau = self._intersection_fraction(start, direction)
-    return start + tau * direction
+    # print('[tau]:', tau, direction, start)
+    return utils.inf if tau == numpy.inf else start + tau * direction
 
 
   def project(self, point):
@@ -136,8 +137,8 @@ class Plane(Shape):
     return intersection, dir_grazing, dir_reflected
 
 
-def build(params):
-  return [Plane(utils.vec3d(*i), utils.vec3d(*n)) for i, n in params.items()]
+def build(specs):
+  return [Plane(utils.vec3d(*i), utils.vec3d(*n)) for i, n in specs.items()]
 
 
 class Ray:
