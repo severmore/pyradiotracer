@@ -2,12 +2,7 @@ import numpy
 from numpy import linalg as lin
 from itertools import count
 
-from radiotracer import utils
-normalize = utils.normalize
-TOLERANCE = utils.TOLERANCE
-Singleton = utils.Singleton
-zero = utils.zero
-
+from radiotracer.utils import normalize, Singleton, TOLERANCE, zero, inf, vec3d
 
 class Shape:
 
@@ -118,7 +113,7 @@ class Plane(Shape):
     direction = end - start
     tau = self._intersection_fraction(start, direction)
     # print('[tau]:', tau, direction, start)
-    return utils.inf if tau == numpy.inf else start + tau * direction
+    return inf if tau == numpy.inf else start + tau * direction
 
 
   def project(self, point):
@@ -146,7 +141,7 @@ class Plane(Shape):
 
 
 def build(specs):
-  return [Plane(utils.vec3d(*i), utils.vec3d(*n)) for i, n in specs.items()]
+  return [Plane(vec3d(*i), vec3d(*n)) for i, n in specs.items()]
 
 
 class Ray:

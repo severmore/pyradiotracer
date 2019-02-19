@@ -6,14 +6,10 @@ from radiotracer import utils
 
 vec = utils.vec3d
 vec_s = utils.vec3d_sequnced
-
-red    = utils.p_red    
-green  = utils.p_green  
-yellow = utils.p_yellow 
-blue   = utils.p_blue   
-turq   = utils.p_turq
-
 view = utils.view
+
+red = lambda s: utils.COLOR_MODIFIED(s, utils.COLORS['red']) 
+turq = lambda s: utils.COLOR_MODIFIED(s, utils.COLORS['turq']) 
 
 class BaseTracerTestCase(unittest.TestCase):
 

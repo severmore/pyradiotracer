@@ -1,8 +1,23 @@
 import numpy
 import itertools
+from functools import wraps
 from numpy.linalg import norm
 
 TOLERANCE = 1e-6
+
+VERBOSE_BRIEF = 0
+VERBOSE_NO_COLORS = 1
+VERBOSE_COLORED = 2
+
+COLORS = {
+  'red': 31, 
+  'green': 32,
+  'yellow': 33,
+  'blue': 34,
+  'turq': 36,
+}
+COLOR_IDENTICAL = lambda s, c: s
+COLOR_MODIFIED = lambda s, c: f'\x1b[{c}m{s}\x1b[0m'
 
 class Singleton(type):
   _instances = {}
@@ -68,6 +83,8 @@ def product_no_consecutives(iterables, repeat=2):
     return filter(has_no_equal_consecutives, 
                   itertools.product(iterables, repeat=repeat))
 
+
+
 ####################
 # Geometry utulities
 ####################
@@ -92,12 +109,31 @@ inf  = vec3d(numpy.inf, numpy.inf, numpy.inf)
 ########################
 # PRINTING ROUTINS
 ########################
-_p_color = lambda s, c: f'\x1b[{c}m{s}\x1b[0m'
-p_red    = lambda s: _p_color(s, 31)
-p_green  = lambda s: _p_color(s, 32)
-p_yellow = lambda s: _p_color(s, 33)
-p_blue   = lambda s: _p_color(s, 34)
-p_turq   = lambda s: _p_color(s, 36)
+
+def verbose_routine(func):
+  @wraps(func)
+  def wrapper(*args, **kwargs):
+    verbose = args[0]
+    
+    if verbose == VERBOSE_COLORED:
+      kwargs['color'] = COLOR_MODIFIED
+
+    elif verbose == VERBOSE_NO_COLORS:
+      kwargs['color'] = COLOR_IDENTICAL
+
+    elif verbose == VERBOSE_BRIEF:
+      return
+
+    else:
+      raise UnknownVerboseValueError(verbose)
+    
+    func(*args, **kwargs)
+  return wrapper
+
+class UnknownVerboseValueError(ValueError):
+  def __init__(self, value):
+    super().__init__(f'Verbose value should be 0,1 or 2, but {value} given')
+
 
 def view(path, sep='->'):
   """ Forms string representation of path. """
