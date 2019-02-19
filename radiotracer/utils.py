@@ -1,4 +1,5 @@
 import numpy
+import itertools
 from numpy.linalg import norm
 
 TOLERANCE = 1e-6
@@ -52,6 +53,20 @@ class ProgressBar:
 def reversed_enumerate(sequence): 
   return zip(range(len(sequence) - 1, -1, -1), reversed(sequence))
 
+
+def product_no_consecutives(iterables, repeat=2):
+    """ Returns Cartesian product of input iterable excluding those contaning
+    equal consecutives elements.
+
+    See: `itertools.product`
+    """
+    def has_no_equal_consecutives(sequence):
+      it, it_shifted = itertools.tee(sequence)
+      next(it_shifted, None)
+      return not any(id1 == id2 for id1, id2 in zip(it, it_shifted))
+
+    return filter(has_no_equal_consecutives, 
+                  itertools.product(iterables, repeat=repeat))
 
 ####################
 # Geometry utulities

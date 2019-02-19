@@ -10,11 +10,17 @@ zero = utils.zero
 
 
 class Shape:
+
+  _id_gen = count()
+
+  def __init__(self):
+    self.id = next(Shape._id_gen)
   
   def normal(self, point=None):
     """ Returns normal to the shape at a `point` """
     raise NotImplementedError('Normal is not defined for an abstarct shape')
   
+
   def is_intersected(self, start, direction):
     """ Check whether a ray specified by its `start` and `direction` crosses
     the plane """
@@ -31,10 +37,11 @@ class Shape:
 class Empty(Shape, metaclass=Singleton):
   """ An empty shape """
   def __str__(self):
+    self.id = numpy.inf
     return repr(self)
   
   def __repr__(self):
-    return f'{self.__class__.__name__}()'
+    return f'{self.__class__.__name__}'
 
   def normal(self, point=None): 
     return zero
@@ -49,18 +56,19 @@ class Empty(Shape, metaclass=Singleton):
     return end
 
 
-
 class Plane(Shape):
     
   def __init__(self, init_point, normal):
     self._point = init_point
     self._normal = normalize(normal)
+    super().__init__()
 
   def __str__(self):
     return repr(self)
   
   def __repr__(self):
-    return f'{self.__class__.__name__}(i:{self._point} n:{self._normal})'
+    classname = self.__class__.__name__.lower()
+    return f'{classname}({self._point} {self._normal})'
 
   def normal(self, point=None):
     """ Returns normal to the shape at a `point` """
