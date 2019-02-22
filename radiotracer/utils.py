@@ -4,6 +4,8 @@ from inspect import signature
 from functools import wraps
 from numpy.linalg import norm
 
+from radiotracer import settings
+
 TOLERANCE = 1e-6
 COLORS = {
   'red': 31, 
@@ -102,7 +104,8 @@ inf  = vec3d(numpy.inf, numpy.inf, numpy.inf)
 ########################
 # PRINTING ROUTINS
 ########################
-def _color_func(color_str):
+
+def _apply_color(color_str):
   """ Produce color function based on its name; if None is given the output 
   will be an identical function, i.e. lambda s: s """
   color_no = COLORS.get(color_str)
@@ -110,31 +113,14 @@ def _color_func(color_str):
     return lambda s: s
   return lambda s: f'\x1b[{color_no}m{s}\x1b[0m'
 
-  
-
-def verbose_routine(color):
+def verbose(color):
   def decorator(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-      sig = signature(func)
-      if not sig.parameters['verbose'].default:
+      if not settings['verbosity']:
         return
-      if sig.parameters['vcolored'].default:
-        kwargs['vcolor'] = _color_func(color)
-      func(*args, **kwargs)
-    return wrapper
-  return decorator
-
-
-
-def verbose_routine3(color):
-  def decorator(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-      if not func.verbose:
-        return
-      if func.colored:
-        kwargs['vcolor'] = _color_func(color)
+      color_ = color if settings['vcolored'] else None
+      kwargs['color'] = _apply_color(color_)
       func(*args, **kwargs)
     return wrapper
   return decorator

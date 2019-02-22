@@ -3,15 +3,9 @@ import numpy
 
 from radiotracer import shape
 from radiotracer.utils import reversed_enumerate, product_no_consecutives, inf
-from radiotracer.utils import view, verbose_routine
+from radiotracer.utils import view, verbose
 
 _SHADOWING_INDENT = .99999
-_IDENTICAL = lambda s: s
-
-settings = {
-  'verbosity': True,
-  'vcolored': True,
-}
 
 class Tracer:
   """ Image reflection method """
@@ -44,10 +38,12 @@ class Tracer:
   
   def _trace_path(self, start, end, sid_sequence):
     """ Build a path from `start` to `end` via reflecting from `shapes` """
-    _print_shapes(self.shapes(sid_sequence))
+    _print__shapes(self.shapes(sid_sequence))
     images = self._i_compute_images(end, sid_sequence)
-    _print_images(images)
-    return self._i_compute_ray_path(start, images, sid_sequence)
+    _print__images(images)
+    path = self._i_compute_ray_path(start, images, sid_sequence)
+    _print__traced_path(path)
+    return path
   
 
   def _i_compute_images(self, point, sid_sequence):
@@ -65,18 +61,15 @@ class Tracer:
     sid_sequence = (numpy.inf,) + sid_sequence
 
     for i, sid in reversed_enumerate(sid_sequence):
-
       ipoint = self.scene[sid].intersect(start, images[i])
-      _print_intersection(self.scene[sid], images[i], ipoint)
+      _print__intersection(self.scene[sid], images[i], ipoint)
       
       if numpy.array_equal(ipoint, inf) or self.is_shadowed(start, ipoint):
-        _print_is_shadowed()
         return None
       
       start = ipoint
       path.append(ipoint)
 
-    _print_traced_path(path)
     return path
   
 
@@ -88,44 +81,26 @@ class Tracer:
 
 
 ### VERBOSE ROUTINES
-from radiotracer.utils import verbose_routine3
-from functools import wraps
 
-def verbose_specify(func):
-  @wraps
-  def wrapper(*args, **kwargs):
-    func(*args, **kwargs)
+@verbose(color='green')
+def _print__shapes(shapes, *, color=None):
+  print(f'{color("[tracing] " + str(len(shapes)))} reflections'
+        f' from {color(shapes)}')
 
-  wrapper.verbose = settings['verbosity']
-  wrapper.colored = settings['vcolored']
-  return wrapper
+@verbose(color='turq')
+def _print__images(images, *, color=None):
+  print(f'images: {color(", ".join([str(i) for i in images]))}')
 
-@verbose_routine3(color='green')
-@verbose_specify
-def _print_shapes(shapes, *, vcolor=_IDENTICAL):
-  print(f'{vcolor("[tracing] " + str(len(shapes)))} reflections'
-        f' from {vcolor(shapes)}')
+@verbose(color='blue')
+def _print__intersection(shape, image, ipoint, *, color=None):
+  print(f'intersect {color(shape)} ({shape.id}) with '
+        f'image {color(image)} at {color(ipoint)}')
 
-@verbose_routine3(color='turq')
-@verbose_specify
-def _print_images(images, *, vcolor=_IDENTICAL):
-  print(f'images: {vcolor(", ".join([str(i) for i in images]))}')
+@verbose(color='green')
+def _print__traced_path(path, *, color=None):
+  print(f'traced path is {color(view(path))}')
 
-@verbose_routine3(color='blue')
-@verbose_specify
-def _print_intersection(shape, image, ipoint, *, vcolor=_IDENTICAL):
-  print(f'intersect {vcolor(shape)} ({shape.id}) with '
-        f'image {vcolor(image)} at {vcolor(ipoint)}')
-
-@verbose_routine3(color='red')
-@verbose_specify
-def _print_is_shadowed(*, vcolor=_IDENTICAL):
-  print(f'{vcolor("shadowed or not intersected")}')
-
-@verbose_routine3(color='green')
-@verbose_specify
-def _print_traced_path(path, *, vcolor=_IDENTICAL):
-  print(f'traced path is {vcolor(view(path))}')
+  
 
 
 if __name__ == '__main__':
@@ -141,8 +116,4 @@ if __name__ == '__main__':
 
   tracer_ = Tracer(shape.build(scene))
   paths = tracer_(vec(0,0,5), vec(0,10,5), max_reflections=1)
-  settings['verbosity'] = False
-  # print('\n'*3)
-  # paths = tracer_(vec(0,0,5), vec(0,10,5), max_reflections=1)
-
   for p in paths: print(len(p) - 2, view(p))
