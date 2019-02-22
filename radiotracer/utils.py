@@ -99,7 +99,6 @@ def length(x):
 zero = vec3d(0.,0.,0.)
 inf  = vec3d(numpy.inf, numpy.inf, numpy.inf)
 
-  
 
 ########################
 # PRINTING ROUTINS
@@ -125,8 +124,3 @@ def verbose(color):
     return wrapper
   return decorator
 
-
-
-def view(path, sep='->'):
-  """ Forms string representation of path. """
-  return sep.join([str(point) for point in path])

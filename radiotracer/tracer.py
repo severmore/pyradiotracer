@@ -3,7 +3,7 @@ import numpy
 
 from radiotracer import shape
 from radiotracer.utils import reversed_enumerate, product_no_consecutives, inf
-from radiotracer.utils import view, verbose
+from radiotracer.utils import verbose
 
 _SHADOWING_INDENT = .99999
 
@@ -14,31 +14,37 @@ class Tracer:
     """ Performs ray tracing of a given `scene` """
     self.scene = {shape.id: shape for shape in scene}
     self._sids = {id_ for id_ in self.scene}
-    self._scene_size = len(scene)
-    self._paths = None
     self.scene[numpy.inf] = shape.Empty()
+
+    self._paths = None
+    self._shapes = None
   
-  def shapes(self, sid_sequence):
-    return [self.scene[sid] for sid in sid_sequence]
+  def get_shapes(self, sid_sequence):
+    return (self.scene[sid] for sid in sid_sequence)
+  
+  def clean(self):
+    self._paths = []
+    self._shapes = []
   
   def __call__(self, tx, rx, max_reflections=2):
     """ Build rays pathes from `tx` to `rx` with at most `reflection_num` 
     reflections.
     """
-    self._paths = []
+    self.clean()
 
     for k in range(max_reflections + 1):
       for sid_sequence in product_no_consecutives(self._sids, repeat=k):
         path = self._trace_path(tx, rx, sid_sequence)
         if path:
           self._paths.append(path)
+          self._shapes.append(sid_sequence)
 
-    return self._paths
+    return self._paths, self._shapes
 
   
   def _trace_path(self, start, end, sid_sequence):
     """ Build a path from `start` to `end` via reflecting from `shapes` """
-    _print__shapes(self.shapes(sid_sequence))
+    _print__shapes(list(self.get_shapes(sid_sequence)))
     images = self._i_compute_images(end, sid_sequence)
     _print__images(images)
     path = self._i_compute_ray_path(start, images, sid_sequence)
@@ -69,15 +75,18 @@ class Tracer:
       
       start = ipoint
       path.append(ipoint)
-
     return path
   
-
   def is_shadowed(self, start, end):
     """ Check if ray with `start` and `end` shadowed by any shape of a scene """
     # Indent from end to exclude shadowing by the shape that forms this ray.
     end = start + _SHADOWING_INDENT * (end - start)
     return any(shape.is_shadowed(start, end) for shape in self.scene.values())
+
+
+def view(path, sep='->'):
+  """ Forms string representation of path. """
+  return sep.join([str(point) for point in path])
 
 
 ### VERBOSE ROUTINES
@@ -115,5 +124,7 @@ if __name__ == '__main__':
   }
 
   tracer_ = Tracer(shape.build(scene))
-  paths = tracer_(vec(0,0,5), vec(0,10,5), max_reflections=1)
-  for p in paths: print(len(p) - 2, view(p))
+  paths, shapes = tracer_(vec(0,0,5), vec(0,10,5), max_reflections=1)
+  
+  for p in paths: 
+    print(len(p) - 2, view(p), shapes)
