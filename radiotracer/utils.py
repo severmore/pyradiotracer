@@ -1,14 +1,10 @@
 import numpy
 import itertools
+from inspect import signature
 from functools import wraps
 from numpy.linalg import norm
 
 TOLERANCE = 1e-6
-
-VERBOSE_BRIEF = 0
-VERBOSE_NO_COLORS = 1
-VERBOSE_COLORED = 2
-
 COLORS = {
   'red': 31, 
   'green': 32,
@@ -16,8 +12,6 @@ COLORS = {
   'blue': 34,
   'turq': 36,
 }
-COLOR_IDENTICAL = lambda s, c: s
-COLOR_MODIFIED = lambda s, c: f'\x1b[{c}m{s}\x1b[0m'
 
 class Singleton(type):
   _instances = {}
@@ -27,7 +21,7 @@ class Singleton(type):
     return cls._instances[cls]
 
 
-class ProgressBar:
+class ProgressBar():
 
   def __init__(self, total, prefix='', suffix='', 
                     decimals=0, length=100, filling='█', empty='_'):
@@ -109,30 +103,43 @@ inf  = vec3d(numpy.inf, numpy.inf, numpy.inf)
 ########################
 # PRINTING ROUTINS
 ########################
+def _color_func(color_str):
+  """ Produce color function based on its name; if None is given the output 
+  will be an identical function, i.e. lambda s: s """
+  color_no = COLORS.get(color_str)
+  if color_no is None:
+    return lambda s: s
+  return lambda s: f'\x1b[{color_no}m{s}\x1b[0m'
 
-def verbose_routine(func):
-  @wraps(func)
-  def wrapper(*args, **kwargs):
-    verbose = args[0]
-    
-    if verbose == VERBOSE_COLORED:
-      kwargs['color'] = COLOR_MODIFIED
+  
 
-    elif verbose == VERBOSE_NO_COLORS:
-      kwargs['color'] = COLOR_IDENTICAL
+def verbose_routine(color):
+  def decorator(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+      sig = signature(func)
+      if not sig.parameters['verbose'].default:
+        return
+      if sig.parameters['vcolored'].default:
+        kwargs['vcolor'] = _color_func(color)
+      func(*args, **kwargs)
+    return wrapper
+  return decorator
 
-    elif verbose == VERBOSE_BRIEF:
-      return
 
-    else:
-      raise UnknownVerboseValueError(verbose)
-    
-    func(*args, **kwargs)
-  return wrapper
 
-class UnknownVerboseValueError(ValueError):
-  def __init__(self, value):
-    super().__init__(f'Verbose value should be 0,1 or 2, but {value} given')
+def verbose_routine3(color):
+  def decorator(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+      if not func.verbose:
+        return
+      if func.colored:
+        kwargs['vcolor'] = _color_func(color)
+      func(*args, **kwargs)
+    return wrapper
+  return decorator
+
 
 
 def view(path, sep='->'):
