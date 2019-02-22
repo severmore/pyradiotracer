@@ -89,9 +89,10 @@ class Tracer:
 
 ### VERBOSE ROUTINES
 from radiotracer.utils import verbose_routine3
-
+from functools import wraps
 
 def verbose_specify(func):
+  @wraps
   def wrapper(*args, **kwargs):
     func(*args, **kwargs)
 

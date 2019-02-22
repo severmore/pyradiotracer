@@ -78,7 +78,6 @@ def product_no_consecutives(iterables, repeat=2):
                   itertools.product(iterables, repeat=repeat))
 
 
-
 ####################
 # Geometry utulities
 ####################
