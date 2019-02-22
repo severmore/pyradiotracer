@@ -6,7 +6,6 @@ from radiotracer import utils
 
 vec = utils.vec3d
 vec_s = utils.vec3d_sequnced
-view = utils.view
 
 red = lambda s: utils.COLOR_MODIFIED(s, utils.COLORS['red']) 
 turq = lambda s: utils.COLOR_MODIFIED(s, utils.COLORS['turq']) 
@@ -23,16 +22,16 @@ class BaseTracerTestCase(unittest.TestCase):
         len1,
         len2, 
         msg=f'\nThe lengths {red(len1)} and {red(len2)} mismatches for lists:\n'
-            f'[{turq(view(list1, sep=sep))}]\n'
-            f'[{turq(view(list2, sep=sep))}]'
+            f'[{turq(tracer.view(list1, sep=sep))}]\n'
+            f'[{turq(tracer.view(list2, sep=sep))}]'
     )
 
     for a1, a2 in zip(list1, list2):
       self.assertTrue(
         numpy.allclose(a1, a2),
         msg=f'\nThe elements {red(a1)} and {red(a2)} are not equal for lists:\n'
-            f'[{turq(view(list1, sep=sep))}]\n'
-            f'[{turq(view(list2, sep=sep))}]'
+            f'[{turq(tracer.view(list1, sep=sep))}]\n'
+            f'[{turq(tracer.view(list2, sep=sep))}]'
       )
   
   def assertPathsEqual(self, paths1, paths2):
@@ -51,7 +50,7 @@ class TracerTestCase(BaseTracerTestCase):
     return [list(map(vec_s, p)) for p in paths]
 
   def test_empty_scene(self):
-    paths = tracer.Tracer([])(vec(0,0,5), vec(0,10,5), max_reflections=3)
+    paths, shapes = tracer.Tracer([])(vec(0,0,5), vec(0,10,5), max_reflections=3)
     self.assertEqual(len(paths), 1)
     self.assertPathsEqual(paths[0], [vec(0,0,5), vec(0,10,5)])
 
@@ -63,7 +62,7 @@ class TracerTestCase(BaseTracerTestCase):
     tracer_ = tracer.Tracer(
       shape.build({(0,0,0): (0,0,1)})
     )
-    paths = tracer_(vec(0,0,5), vec(0,10,5), max_reflections=3)
+    paths, shapes = tracer_(vec(0,0,5), vec(0,10,5), max_reflections=3)
     self.assertEqual(len(paths), 2)
     self.assertPathsEqual(paths, reference)
 
@@ -83,7 +82,7 @@ class TracerTestCase(BaseTracerTestCase):
         (0,0,10): (0,0,-1),
       })
     )
-    paths = tracer_(vec(0,0,5), vec(0,10,5), max_reflections=3)
+    paths, shapes = tracer_(vec(0,0,5), vec(0,10,5), max_reflections=3)
     self.assertEqual(len(paths), len(reference))
     self.assertPathsEqual(paths, reference)
 
@@ -98,7 +97,7 @@ class TracerTestCase(BaseTracerTestCase):
         (0,0,-10): (0,0,1), # should be unused
       })
     )
-    paths = tracer_(vec(0,0,5), vec(0,10,5), max_reflections=3)
+    paths, shapes = tracer_(vec(0,0,5), vec(0,10,5), max_reflections=3)
     self.assertEqual(len(paths), 2)
     self.assertPathsEqual(paths, reference)
     
