@@ -1,14 +1,14 @@
 import unittest
 import numpy
-from radiotracer import shape
-from radiotracer import tracer
-from radiotracer import utils
+from ratracer import shape
+from ratracer import tracer
+from ratracer import utils
 
 vec = utils.vec3d
 vec_s = utils.vec3d_sequnced
 
-red = lambda s: utils.COLOR_MODIFIED(s, utils.COLORS['red']) 
-turq = lambda s: utils.COLOR_MODIFIED(s, utils.COLORS['turq']) 
+red = utils._apply_color('red') 
+turq = utils._apply_color('turq') 
 
 class BaseTracerTestCase(unittest.TestCase):
 

@@ -2,7 +2,7 @@ import numpy
 from numpy import linalg as lin
 from itertools import count
 
-from radiotracer.utils import normalize, Singleton, TOLERANCE, zero, inf, vec3d
+from ratracer.utils import normalize, Singleton, TOLERANCE, zero, inf, vec3d
 
 class Shape:
 

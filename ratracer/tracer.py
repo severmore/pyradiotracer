@@ -1,9 +1,9 @@
 import itertools
 import numpy
 
-from radiotracer import shape
-from radiotracer.utils import reversed_enumerate, product_no_consecutives, inf
-from radiotracer.utils import verbose
+from ratracer import shape
+from ratracer.utils import reversed_enumerate, product_no_consecutives, inf
+from ratracer.utils import verbose
 
 _SHADOWING_INDENT = .99999
 

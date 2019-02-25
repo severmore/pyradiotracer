@@ -4,7 +4,7 @@ from inspect import signature
 from functools import wraps
 from numpy.linalg import norm
 
-from radiotracer import settings
+from ratracer import settings
 
 TOLERANCE = 1e-6
 COLORS = {
