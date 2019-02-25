@@ -1,5 +1,9 @@
 import numpy
 
+from ratracer import shape
+from ratracer.utils import zero, length, vec3d
+from ratracer.tracer import Tracer
+
 LIGHT_SPEED = 299792458. # mps
 TOLERANCE = 1e-9
 
@@ -20,7 +24,7 @@ class Reflectivity:
   class InvalidKindException(Exception): pass
 
   def __init__(self, *, kind='fresnel', const_freq=True, frequency=1e9,
-      permittivity=1, conductivity=.01, rvalue=-1., **kwargs):
+      permittivity=1, conductivity=.01, rvalue=-1.):
     
     if kind == 'fresnel':
       self.frequency = frequency
@@ -28,18 +32,18 @@ class Reflectivity:
       self.conductivity = conductivity
       self.const_freq = const_freq
       self.eta = permittivity - 60j * LIGHT_SPEED / frequency * conductivity
-      self.reflection = self._fresnel
+      self._reflection_model = self._fresnel
     
     elif kind == 'constant':
       self.rvalue = rvalue
-      self.reflection = self._constant
+      self._reflection_model = self._constant
     
     else:
       msg = '`kind` should be "fresnel" or "constant"'
       raise Reflectivity.InvalidKindException(msg)
+    
 
-
-  def _constant(self, aoa_cosine, **kwargs):
+  def _constant(self, aoa_cosine):
     return self.rvalue
   
   def _fresnel(self, aoa_cosine, polarization=1., frequency=1e9):
@@ -56,6 +60,10 @@ class Reflectivity:
     r_prp = (aoa_sine - c_prp) / (aoa_sine + c_prp) if polarization !=1 else 0.j
 
     return polarization * r_prl + (1 - polarization) * r_prp
+  
+  @staticmethod
+  def create_constant(rvalue):
+    return Reflectivity(kind='constant', rvalue=rvalue)
 
 
 class RadiactionPattern:
@@ -103,10 +111,81 @@ class RadiactionPattern:
     elif numpy.abs(rt_sin) < TOLERANCE:
       return numpy.cos(kh * ra_sin)
     
-    return numpy.sin(kw * ra_sin * rt_sin) *
-            numpy.cos(kh * ra_sin * rt_cos) /  \
+    return numpy.sin(kw * ra_sin * rt_sin) *  \
+           numpy.cos(kh * ra_sin * rt_cos) /  \
                     (kw * ra_sin * rt_sin)
                
   def _patch(self, ra_cos, rt_cos):
     return numpy.abs(_patch_factor(ra_cos, rt_cos)) * \
           (rt_cos ** 2 + ra_cos ** 2 * sine(rt_cos) ** 2) ** 0.5
+
+
+class RadioShapeMixin:
+  def attenuation(self): pass
+
+class RadioPlane(shape.Plane, RadioShapeMixin):
+
+  _DEFAULT_RVALUE = .9
+
+  def __init__(self, init_point, normal, reflectivity=None, velocity=zero):
+    super().__init__(init_point, normal)
+    self.velocity = velocity
+    self._reflectivity = reflectivity if reflectivity else \
+        Reflectivity.create_constant(RadioPlane._DEFAULT_RVALUE)
+  
+  def attenuation(self, direction):
+    ra_cos = self.grazing_angle(direction)
+    return self._reflectivity._reflection_model(ra_cos)
+
+
+def build(specs):
+  return (RadioPlane(vec3d(*i), vec3d(*n)) for i, n in specs.items())
+
+class KRayPathloss:
+  
+  def __init__(self, scene, frequency=1e9):
+    self._tracer = Tracer(build(scene))
+    self._frequency = frequency
+    self._wavelen = LIGHT_SPEED / frequency
+    self._k = 2*numpy.pi / self._wavelen 
+    self._pathloss = 0
+  
+  def __call__(self, tx, rx, max_reflections=2):
+    """ Compute pathloss on propagation from `tx` to `rx`. """
+    self._pathloss = 0
+    paths, sids_seq = self._tracer(tx, rx, max_reflections)
+
+    for path, sids in zip(paths, sids_seq):
+      len_ = length(path[0] - path[1])
+      reflection = 1.
+      
+      for i in range(1, len(path) - 1):
+        direction = path[i] - path[i+1]
+        len_ += length(direction)
+        shape = self._tracer.scene[sids[i-1]]
+        reflection *= shape.attenuation(direction)
+      
+      self._pathloss += .5 / (self._k * len_) * \
+                        numpy.exp(-1j * self._k * len_) * reflection
+    
+    return self._pathloss
+
+  def set_frequency(self, new_frequency):
+    self._frequency = frequency
+    self._wavelen = LIGHT_SPEED / frequency
+    self._k = 2*numpy.pi / self.wavelen
+
+if __name__ == '__main__':
+  from utils import vec3d as vec
+
+  scene = {
+    (0,0, 0): (0,0,1),
+    (0,0,10): (0,0,-1),
+    (5,0,0): (-1,0,0),
+    (-5,0,0): (1,0,0),
+  }
+
+  pathloss_model = KRayPathloss(scene)
+  pathloss = pathloss_model(vec(0,0,5), vec(0,10,5), max_reflections=2)
+  
+  print(pathloss)

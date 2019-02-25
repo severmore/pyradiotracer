@@ -29,7 +29,7 @@ _SHADOWING_INDENT = .99999
 class Tracer:
   """ Implements mirrow reflection method. Contains methods which are as 
   follows:
-  
+
     - :func:`__call__ - run ray-tracing for a scene
     - :func:`clear` - clear results of previous tracer call; when tracer is 
         called, cleaning routine run automatically

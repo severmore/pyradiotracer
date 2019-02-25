@@ -15,18 +15,22 @@ class Shape:
     """ Returns normal to the shape at a `point` """
     raise NotImplementedError('Normal is not defined for an abstarct shape')
   
-
   def is_intersected(self, start, direction):
     """ Check whether a ray specified by its `start` and `direction` crosses
     the plane """
     raise NotImplementedError(
-      'Intersection is not defined for an abstarct shape')
+      'Intersection is not defined for an abstract shape')
   
   def intersection(self, start, direction, end=None):
     """ Returns an intersection point of a ray specified by its `start` 
     and `direction` with the plane """
     raise NotImplementedError(
-      'Intersection is not defined for an abstarct shape')
+      'Intersection is not defined for an abstract shape')
+  
+  def grazing_angle(self, direction):
+    """ Returns a cosine of grazing angle for ray hitting towards `direction`"""
+    raise NotImplementedError(
+      'Grazing angle is not defined for an abstract shape')
 
 
 class Empty(Shape, metaclass=Singleton):
@@ -38,17 +42,10 @@ class Empty(Shape, metaclass=Singleton):
   def __repr__(self):
     return f'{self.__class__.__name__}'
 
-  def normal(self, point=None): 
-    return zero
-  
-  def is_intersect(self, start, direction):
-    return False
-
-  def is_shadowed(self, start, end):
-    return False
-
-  def intersect(self, start, end):
-    return end
+  def normal(self, point=None): return zero
+  def is_intersect(self, start, direction): return False
+  def is_shadowed(self, start, end): return False
+  def intersect(self, start, end): return end
 
 
 class Plane(Shape):
@@ -138,6 +135,10 @@ class Plane(Shape):
     dir_reflected = normalize(end - intersection)
 
     return intersection, dir_grazing, dir_reflected
+  
+  def grazing_angle(self, direction):
+    """ Returns a cosine of grazing angle for ray hitting towards `direction`"""
+    return numpy.abs(numpy.dot(direction, self._normal))
 
 
 def build(specs):
