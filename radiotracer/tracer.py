@@ -84,36 +84,37 @@ class Tracer:
     return any(shape.is_shadowed(start, end) for shape in self.scene.values())
 
 
-def view(path, sep='->'):
+def view(path, *,sep='->'):
   """ Forms string representation of path. """
+  if path is None:
+    return 'None'
   return sep.join([str(point) for point in path])
 
 
 ### VERBOSE ROUTINES
 
 @verbose(color='green')
-def _print__shapes(shapes, *, color=None):
+def _print__shapes(shapes, *, color):
   print(f'{color("[tracing] " + str(len(shapes)))} reflections'
         f' from {color(shapes)}')
 
 @verbose(color='turq')
-def _print__images(images, *, color=None):
+def _print__images(images, *, color):
   print(f'images: {color(", ".join([str(i) for i in images]))}')
 
 @verbose(color='blue')
-def _print__intersection(shape, image, ipoint, *, color=None):
+def _print__intersection(shape, image, ipoint, *, color):
   print(f'intersect {color(shape)} ({shape.id}) with '
         f'image {color(image)} at {color(ipoint)}')
 
 @verbose(color='green')
-def _print__traced_path(path, *, color=None):
+def _print__traced_path(path, *, color):
   print(f'traced path is {color(view(path))}')
 
   
 
 
 if __name__ == '__main__':
-
   from utils import vec3d as vec
 
   scene = {
@@ -124,7 +125,11 @@ if __name__ == '__main__':
   }
 
   tracer_ = Tracer(shape.build(scene))
-  paths, shapes = tracer_(vec(0,0,5), vec(0,10,5), max_reflections=1)
+  paths, shapes = tracer_(vec(0,0,5), vec(0,10,5), max_reflections=2)
   
-  for p in paths: 
-    print(len(p) - 2, view(p), shapes)
+  @verbose('red')
+  def _sids(sids, *, color): return f'{color(view(sids, sep=" "))}'
+  def _shapes(sids): return view([tracer_.scene[s] for s in sids], sep=", ")
+
+  for p, s in zip(paths, shapes):
+    print(f'{len(s)} {view(p)},\t{_sids(s)},\t{_shapes(s)}', sep='\n')

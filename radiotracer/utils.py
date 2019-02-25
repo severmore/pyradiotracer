@@ -120,7 +120,7 @@ def verbose(color):
         return
       color_ = color if settings['vcolored'] else None
       kwargs['color'] = _apply_color(color_)
-      func(*args, **kwargs)
+      return func(*args, **kwargs)
     return wrapper
   return decorator
 
