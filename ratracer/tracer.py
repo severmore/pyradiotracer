@@ -39,19 +39,28 @@ class Tracer:
         scene.
   """
 
-  def __init__(self, scene):
+  def __init__(self, scene, etype=shape.Empty):
     """ Performs ray tracing of a given :param:`scene`. Scene itself is a 
     sequence of shapes located in module :mod:'ratracer.shape'. The tracing 
     based on mirrow reflection method and it is subject to specular relfections.
+
+    Parameters
+    __________
+    scene : list of `shape.Shape`
+        A list of shape forming the scene to trace
+    etype : subclass of `shape.Empty` (optional)
+        A class of empty shape being used inside tracing engine to skip some 
+        operations with shapes. Default value is `shape.Empty`.
 
     See Also
     ________
     .shape.build_shapes
     .shape.Plane
+    .shape.Empty
     """
     self.scene = {shape.id: shape for shape in scene}
     self._sids = {id_ for id_ in self.scene}
-    self.scene[numpy.inf] = shape.Empty()
+    self.scene[numpy.inf] = etype()
 
     self._paths = None
     self._shapes = None

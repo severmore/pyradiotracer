@@ -138,6 +138,7 @@ class Plane(Shape):
   
   def grazing_angle(self, direction):
     """ Returns a cosine of grazing angle for ray hitting towards `direction`"""
+    direction = normalize(direction)
     return numpy.abs(numpy.dot(direction, self._normal))
 
 
