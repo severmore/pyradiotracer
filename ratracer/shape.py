@@ -72,7 +72,7 @@ class Plane(Shape):
     means the normal directed to the same semi-plane as a point to be, negative 
     - an oposite semi-plane 
     """
-    return numpy.dot(point - self._point, self._normal)
+    return numpy.dot(self._point - point, self._normal)
 
   def _intersection_fraction(self, start, direction):
     """ Return the coeffient for an intersection point computation; an infinity
@@ -84,7 +84,11 @@ class Plane(Shape):
     if numpy.abs(denom) < TOLERANCE:
         return numpy.inf
 
-    tau = -self._distance_to(start) / denom
+    tau = self._distance_to(start) / denom
+
+    # tau = numpy.dot(self._point - start, self._normal)/ denom
+
+    # print('[!!]', tau)
     return tau if tau > 0 else numpy.inf
 
 
@@ -101,7 +105,6 @@ class Plane(Shape):
   def is_shadowed(self, start, end):
     """ Check whether 'self' shadows the ray at a segement start - end. """
     tau = self._intersection_fraction(start, end - start)
-    # print('[si_shadowed]', self, start, end, tau, tau >= 0 and tau <= 1, flush=True)
     return tau >= 0 and tau <= 1
 
   def intersect(self, start, end):
@@ -109,17 +112,16 @@ class Plane(Shape):
     and `direction` with the plane """
     direction = end - start
     tau = self._intersection_fraction(start, direction)
-    # print('[tau]:', tau, direction, start)
     return inf if tau == numpy.inf else start + tau * direction
 
 
   def project(self, point):
     """ Project a point on the plane """
-    return point - self._distance_to(point) * self._normal
+    return point + self._distance_to(point) * self._normal
 
   def reflect(self, point):
     """ Reflect a point from the plane """
-    return point - 2 * self._distance_to(point) * self._normal
+    return point + 2 * self._distance_to(point) * self._normal
   
   def reflect_ray(self, start, direction):
     """ Returns a reflected ray """
