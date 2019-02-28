@@ -26,6 +26,11 @@ class Shape:
     and `direction` with the plane """
     raise NotImplementedError(
       'Intersection is not defined for an abstract shape')
+
+  def is_shadowing(self, start, direction, end=None):
+    """ Check whether 'self' shadows the ray at a segement start - end. """
+    raise NotImplementedError(
+      'Intersection is not defined for an abstract shape')
   
   def grazing_angle(self, direction):
     """ Returns a cosine of grazing angle for ray hitting towards `direction`"""
@@ -44,7 +49,7 @@ class Empty(Shape, metaclass=Singleton):
 
   def normal(self, point=None): return zero
   def is_intersect(self, start, direction): return False
-  def is_shadowed(self, start, end): return False
+  def is_shadowing(self, start, end): return False
   def intersect(self, start, end): return end
 
 
@@ -85,10 +90,6 @@ class Plane(Shape):
         return numpy.inf
 
     tau = self._distance_to(start) / denom
-
-    # tau = numpy.dot(self._point - start, self._normal)/ denom
-
-    # print('[!!]', tau)
     return tau if tau > 0 else numpy.inf
 
 
@@ -102,7 +103,7 @@ class Plane(Shape):
     the plane """
     return self._intersection_fraction(start, direction) != numpy.infty
 
-  def is_shadowed(self, start, end):
+  def is_shadowing(self, start, end):
     """ Check whether 'self' shadows the ray at a segement start - end. """
     tau = self._intersection_fraction(start, end - start)
     return tau >= 0 and tau <= 1

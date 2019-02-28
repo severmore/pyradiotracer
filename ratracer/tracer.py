@@ -126,7 +126,7 @@ class Tracer:
       ipoint = self.scene[sid].intersect(start, images[i])
       _print__intersection(self.scene[sid], images[i], ipoint)
       
-      if numpy.array_equal(ipoint, inf) or self.is_shadowed(start, ipoint):
+      if numpy.array_equal(ipoint, inf) or self.is_shadowed_ray(start, ipoint):
         return None
       
       start = ipoint
@@ -142,11 +142,11 @@ class Tracer:
     """ Get a generator of shapes stored in :param:`self.scene` by its ids. """
     return (self.scene[sid] for sid in sid_sequence)
   
-  def is_shadowed(self, start, end):
+  def is_shadowed_ray(self, start, end):
     """ Check if ray with `start` and `end` shadowed by any shape of a scene """
     # Indent from end to exclude shadowing by the shape that forms this ray.
     end = start + _SHADOWING_INDENT * (end - start)
-    return any(shape.is_shadowed(start, end) for shape in self.scene.values())
+    return any(shape.is_shadowing(start, end) for shape in self.scene.values())
 
 
 def view(path, *, sep='->'):
