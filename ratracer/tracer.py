@@ -20,11 +20,14 @@ useful to compute scene with specular reflecting shapes.
 import itertools
 import numpy
 
-from ratracer import shape
+from ratracer import shape, settings
 from ratracer.utils import reversed_enumerate, product_no_consecutives, inf
-from ratracer.utils import verbose
+from ratracer.utils import verbose, normalize, norm
 
-_SHADOWING_INDENT = .99999
+DIR_CODE = 0
+LEN_CODE = 1
+SID_CODE = 2
+AOA_CODE = 3
 
 class Tracer:
   """ Implements mirrow reflection method. Contains methods which are as 
@@ -38,6 +41,39 @@ class Tracer:
     - :func:`is_shadowed` - check if specified ray intersect any object of
         scene.
   """
+  class Result:
+
+    def __init__(self):
+      """ The class to store results of ray tracing and to provide access to it.
+      """
+      self.paths = []
+      self._temp = ([], [], [], [])
+
+    def append(self, *point):
+      """ Append point traced right now to the building path. """
+      for p, v in zip(self._temp, point): 
+        p.append(v)
+    
+    def append_last(self, *last_point):
+      """ Append the last traced point of the ray path. """
+      self.append(*last_point) # zip will skip `sid` and `aoa` parameters
+      self.save()
+    
+    def clear(self):
+      """ Clear currently built path. """
+      self._temp = ([], [], [], [])
+        
+
+    def refresh(self):
+      """ Clear all path being built before. """
+      self.paths.clear()
+      self.clear()
+
+    def save(self):
+      """ Save building path. """
+      if self._temp[0]: # any of dir~ and len~ lists are possible
+        self.paths.append(self._temp)
+        self.clear()
 
   def __init__(self, scene, etype=shape.Empty):
     """ Performs ray tracing of a given :param:`scene`. Scene itself is a 
@@ -61,51 +97,50 @@ class Tracer:
     self.scene = {shape.id: shape for shape in scene}
     self._sids = {id_ for id_ in self.scene}
     self.scene[numpy.inf] = etype()
-
-    self._paths = None
-    self._shapes = None
+    self.result = Tracer.Result()
   
-  def __call__(self, tx, rx, max_reflections=2):
-    """ Build rays pathes from :arg:`tx` to :arg:`rx` with at most 
+  def __call__(self, start, end, max_reflections=2):
+    """ Build rays pathes from :arg:`start` to :arg:`end` with at most 
     :arg:`max_reflections` reflections.
 
     Parameters
     __________
-    tx : `np.ndarray`
+    start : 3-`np.ndarray`
         Starting point for rays
-    rx : `np.ndarray`
+    end : 3-`np.ndarray`
         Ending point for rays
     max_reflections : int, optional
         Restict rays with a maximum number of reflection
     
     Returns
     _______
-    paths, sids : list of list of 3-`np.ndarray`, list of turple of int
-        A list of all rays traced and a list of shapes id which caused of
-        reflections of proper rays.
-    
-    
+    result: obj:`.Tracer.Result`
+        result object storing traced ray paths parameters:
+          - sigments direction
+          - length
+          - cosine of angle of arriving (aoa)
+          - shape ID from which a ray reflects
     """
-    self.clean()
+    self.result.refresh()
 
     for k in range(max_reflections + 1):
       for sid_sequence in product_no_consecutives(self._sids, repeat=k):
-        path = self._trace_path(tx, rx, sid_sequence)
-        if path:
-          self._paths.append(path)
-          self._shapes.append(sid_sequence)
+        self._trace_path(start, end, sid_sequence)
+        # print(f'root: {start}, {end}')
 
-    return self._paths, self._shapes
+    return self.result
 
   
   def _trace_path(self, start, end, sid_sequence):
     """ Build a path from `start` to `end` via reflecting from `shapes` """
-    _print__shapes(list(self.get_shapes(sid_sequence)))
+    _print__shapes(list(self.get_shapes(sid_sequence))) # TODO: take preparation into _print__
     images = self._i_compute_images(end, sid_sequence)
     _print__images(images)
-    path = self._i_compute_ray_path(start, images, sid_sequence)
-    _print__traced_path(path)
-    return path
+    # print(f'start1={start}')
+    self._i_compute_ray_path(start, end, images, sid_sequence)
+    # print(f'start2={start}')
+    _print__traced_path(self.result.paths[-1], start)
+    # print(f'start3={start}')
   
 
   def _i_compute_images(self, point, sid_sequence):
@@ -114,39 +149,46 @@ class Tracer:
     images = [point]
     for sid in sid_sequence:
       images.append(self.scene[sid].reflect(images[-1]))
-    return images
+    return images[1:]
 
 
-  def _i_compute_ray_path(self, start, images, sid_sequence):
+  def _i_compute_ray_path(self, start, end, images, sid_sequence):
     """ Build path component in forward direction """
-    path = [start]
-    sid_sequence = (numpy.inf,) + sid_sequence
-
+    # print('testing before', start)
+    _start = numpy.array(start)
     for i, sid in reversed_enumerate(sid_sequence):
-      ipoint = self.scene[sid].intersect(start, images[i])
-      _print__intersection(self.scene[sid], images[i], ipoint)
       
-      if numpy.array_equal(ipoint, inf) or self.is_shadowed_ray(start, ipoint):
-        return None
+      direction = normalize(images[i] - _start)
+      # print(f'testing: dir={direction}, start={_start}, im={images[i]}, shape={self.scene[sid]}')
+      length, aoa = self.scene[sid].intersect(_start, direction)
+      delta = direction * length
+      if length is numpy.nan or self.is_shadowed(_start, delta):
+        self.result.clear()
+        return
       
-      start = ipoint
-      path.append(ipoint)
-    return path
-
-  def clean(self):
-    """ Clean previously build pathes. """
-    self._paths = []
-    self._shapes = []
+      _start += delta
+      self.result.append(direction, length, sid, aoa)
+      _print__intersection(self.scene[sid], images[i], start)
+    
+    delta = end - _start
+    length = norm(delta)
+    direction = delta / length
+    if self.is_shadowed(_start, delta):
+      self.result.clear()
+      return
+  
+    # print(f'add last component with dir={direction}, len={length}')
+    self.result.append_last(direction, length)
+    # print(f'|start={start}, result={self.result.paths}')
   
   def get_shapes(self, sid_sequence):
     """ Get a generator of shapes stored in :param:`self.scene` by its ids. """
     return (self.scene[sid] for sid in sid_sequence)
   
-  def is_shadowed_ray(self, start, end):
+  def is_shadowed(self, start, delta):
     """ Check if ray with `start` and `end` shadowed by any shape of a scene """
-    # Indent from end to exclude shadowing by the shape that forms this ray.
-    end = start + _SHADOWING_INDENT * (end - start)
-    return any(shape.is_shadowing(start, end) for shape in self.scene.values())
+    return any(shape.is_shadowing(start,delta) for shape in self.scene.values())
+
 
 
 def view(path, *, sep='->'):
@@ -173,8 +215,17 @@ def _print__intersection(shape, image, ipoint, *, color):
         f'image {color(image)} at {color(ipoint)}')
 
 @verbose(color='green')
-def _print__traced_path(path, *, color):
-  print(f'traced path is {color(view(path))}')
+def _print__traced_path(path, start, *, color):
+  breaks = [numpy.array(start)]
+  _start = numpy.array(start)
+  # print(f'printing path {color(path)}')
+  for d, l in zip(path[0], path[1]):
+    # print(f'printing', color(d), color(l))
+    # print(f'printing dl={d * l}, start={_start}')
+    _start = _start + d*l
+    # print(f'printing', _start)
+    breaks.append(_start)
+  print(f'traced path is {color(view(breaks))}')
 
   
 
@@ -184,16 +235,16 @@ if __name__ == '__main__':
   scene = {
     (0,0, 0): (0,0,1),
     (0,0,10): (0,0,-1),
-    (5,0,0): (-1,0,0),
-    (-5,0,0): (1,0,0),
+    # (5,0,0): (-1,0,0),
+    # (-5,0,0): (1,0,0),
   }
 
   tracer_ = Tracer(shape.build(scene))
-  paths, shapes = tracer_(vec(0,0,5), vec(0,10,5), max_reflections=2)
+  result = tracer_(vec(0,0,5), vec(0,10,5), max_reflections=1)
   
-  @verbose('red')
-  def _sids(sids, *, color): return f'{color(view(sids, sep=" "))}'
-  def _shapes(sids): return view([tracer_.scene[s] for s in sids], sep=", ")
+  # @verbose('red')
+  # def _sids(sids, *, color): return f'{color(view(sids, sep=" "))}'
+  # def _shapes(sids): return view([tracer_.scene[s] for s in sids], sep=", ")
 
-  for p, s in zip(paths, shapes):
-    print(f'{len(s)} {view(p)},\t{_sids(s)},\t{_shapes(s)}', sep='\n')
+  # for p, s in zip(paths, shapes):
+  #   print(f'{len(s)} {view(p)},\t{_sids(s)},\t{_shapes(s)}', sep='\n')

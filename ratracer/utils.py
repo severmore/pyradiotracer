@@ -76,7 +76,7 @@ def product_no_consecutives(iterables, repeat=2):
       next(it_shifted, None)
       return not any(id1 == id2 for id1, id2 in zip(it, it_shifted))
 
-    return filter(has_no_equal_consecutives, 
+    return filter(has_no_equal_consecutives,
                   itertools.product(iterables, repeat=repeat))
 
 

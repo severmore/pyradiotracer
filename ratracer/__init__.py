@@ -1,4 +1,4 @@
-__all__ = ['shape', 'tracer', 'utils']
+__all__ = ['shape', 'tracer', 'utils', 'power']
 
 settings = {
   'verbosity': True,
