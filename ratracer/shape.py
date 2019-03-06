@@ -1,84 +1,28 @@
+"""
+'ratracer.shape' define all types of shapes for ray tracing to be used.
+Contains classes:
+
+  `.Identifiable` - 
+      class defining local and brief ids for user's shapes.
+  `.Plane` - 
+      a plane specified by its normal and some point on its surface,
+      that can be treated as zero-point in 2D-coordinates on the plane.
+"""
 import numpy
-from numpy import linalg as lin
 from itertools import count
 
-from ratracer.utils import normalize, Singleton, TOLERANCE, zero, inf, vec3d
+from ratracer.utils import normalize, TOLERANCE, vec3d
 
 _SHADOWING_INDENT = .99999
 _NO_INTERSECTION = numpy.nan, numpy.nan
 
-# def abstract(method):
-#   class AbstractMethodExcception(Exception): pass
-#   def wrapper(*args, **kwargs):
-#     raise AbstractMethodExcception(f'Method {method.__qualname__} is abstract')
-#   return wrapper
-
-class _Identifiable:
+class Identifiable:
+  """ A class that intended to be subclassed to provide a brief id. """
   _id_gen = count()
   def __init__(self):
-    self.id = next(_Identifiable._id_gen)
+    self.id = next(Identifiable._id_gen)
 
-# from inspect import getmembers
-
-# def abstract_class(cls):
-#   def f(o):
-#     print('!', str(o).find(cls.__name__), str(o))
-    
-#     return False
-#   for name, method in getmembers(cls, f):
-#     print('[A]', name)
-#     setattr(cls, name, abstract(method))
-#   return cls
-
-
-# @abstract_class
-class Shape(_Identifiable):
-
-  # @abstract
-  def normal(self, point=None):
-    """ Returns normal to the shape at a `point` """
-    pass
-  
-  # @abstract
-  def is_intersected(self, start, direction):
-    """ Check whether a ray specified by its `start` and `direction` crosses
-    the plane """
-    pass
-  
-  # @abstract
-  def intersection(self, start, direction, end=None):
-    """ Returns an intersection point of a ray specified by its `start` 
-    and `direction` with the plane """
-    pass
-
-  # @abstract
-  def is_shadowing(self, start, direction, end=None):
-    """ Check whether 'self' shadows the ray at a segement start - end. """
-    pass
-  
-  # @abstract
-  def grazing_angle(self, direction):
-    """ Returns a cosine of grazing angle for ray hitting towards `direction`"""
-    pass
-
-
-# class Empty(Shape, metaclass=Singleton):
-#   """ An empty shape """
-#   def __str__(self):
-#     self.id = numpy.inf
-#     return repr(self)
-  
-#   def __repr__(self):
-#     return f'{self.__class__.__name__}'
-
-#   def normal(self, point=None): return zero
-#   def is_intersect(self, start, direction): return False
-#   def is_shadowing(self, start, end): return False
-#   def intersect(self, start, direction): 
-#     return
-
-
-class Plane(Shape):
+class Plane(Identifiable):
     
   def __init__(self, init_point, normal):
     self._point = init_point
@@ -137,37 +81,29 @@ class Plane(Shape):
     return (length, aoa_cosine) if length > 0 else _NO_INTERSECTION
 
   def is_intersected(self, start, direction):
-    """ Check whether a ray specified by its `start` and `direction` crosses
-    the plane. """
+    """ Check whether a ray specified by its :arg:`start` and :arg:`direction` 
+    crosses the plane. """
     return self.intersect(start, direction) != _NO_INTERSECTION
 
   def is_shadowing(self, start, delta):
     """ Check whether 'self' shadows the ray at a segement start - end. Note, 
     that :arg:delta should not be normalized. """
-    length, aoa = self.intersect(start, delta * _SHADOWING_INDENT)
+    length, _ = self.intersect(start, delta * _SHADOWING_INDENT)
     return length > 0 and length < 1
 
   def normal(self, point=None):
-    """ Returns normal to the shape at a `point` """
+    """ Returns normal to the shape at a :arg:`point` (:arg:`point` is 
+    insufficient here). """
     return self._normal
 
   def project(self, point):
-    """ Project a point on the plane """
+    """ Project a point on the plane. """
     return point + self._distance_to(point) * self._normal
 
   def reflect(self, point):
-    """ Reflect a point from the plane """
+    """ Reflect a point from the plane. """
     return point + 2 * self._distance_to(point) * self._normal
-
 
 
 def build(specs):
   return [Plane(vec3d(*i), vec3d(*n)) for i, n in specs.items()]
-
-
-
-if __name__ == '__main__':
-  e1 = Empty()
-  e2 = Empty()
-
-  print(e1 is e2)
