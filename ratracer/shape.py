@@ -62,20 +62,20 @@ class Shape(_Identifiable):
     pass
 
 
-class Empty(Shape, metaclass=Singleton):
-  """ An empty shape """
-  def __str__(self):
-    self.id = numpy.inf
-    return repr(self)
+# class Empty(Shape, metaclass=Singleton):
+#   """ An empty shape """
+#   def __str__(self):
+#     self.id = numpy.inf
+#     return repr(self)
   
-  def __repr__(self):
-    return f'{self.__class__.__name__}'
+#   def __repr__(self):
+#     return f'{self.__class__.__name__}'
 
-  def normal(self, point=None): return zero
-  def is_intersect(self, start, direction): return False
-  def is_shadowing(self, start, end): return False
-  def intersect(self, start, direction): 
-    return
+#   def normal(self, point=None): return zero
+#   def is_intersect(self, start, direction): return False
+#   def is_shadowing(self, start, end): return False
+#   def intersect(self, start, direction): 
+#     return
 
 
 class Plane(Shape):
@@ -91,6 +91,16 @@ class Plane(Shape):
   def __repr__(self):
     classname = self.__class__.__name__.lower()
     return f'{classname}({self._point} {self._normal})'
+  
+  def _aoa_cosine(self, direction):
+    """ Returns a signed cosine of grazing angle (angle of arrival) for ray 
+    hitting towards `direction`. 
+    """
+    return numpy.dot(direction, self._normal)
+  
+  def aoa_cosine(self, direction):
+    """ Returns a cosine of grazing angle for ray hitting towards `direction`"""
+    return numpy.abs(_aoa_cosine(direction))
 
   def _distance_to(self, point):
     """ A signed distance between a `point` and the plane; a positive value 
@@ -102,12 +112,6 @@ class Plane(Shape):
   def distance_to(self, point):
     """ Return the distance from the plane to a `point` """
     return numpy.abs(self._distance_to(point))
-  
-  def _aoa_cosine(self, direction):
-    """ Returns a signed cosine of grazing angle (angle of arrival) for ray 
-    hitting towards `direction`. 
-    """
-    return numpy.dot(direction, self._normal)
 
   def intersect(self, start, direction):
     """ Return the coeffient for an intersection point computation; an infinity
@@ -130,30 +134,22 @@ class Plane(Shape):
     if numpy.abs(aoa_cosine) < TOLERANCE: 
       return _NO_INTERSECTION
     length = self._distance_to(start) / aoa_cosine
-    return length, aoa_cosine if length > 0 else _NO_INTERSECTION
+    return (length, aoa_cosine) if length > 0 else _NO_INTERSECTION
 
-  # def is_intersected(self, start, direction):
-    # """ Check whether a ray specified by its `start` and `direction` crosses
-    # the plane """
-    # return self._intersection_fraction(start, direction) != numpy.infty
+  def is_intersected(self, start, direction):
+    """ Check whether a ray specified by its `start` and `direction` crosses
+    the plane. """
+    return self.intersect(start, direction) != _NO_INTERSECTION
 
   def is_shadowing(self, start, delta):
-    """ Check whether 'self' shadows the ray at a segement start - end. """
-    # delta is not normalized, thus one should check if length is in [0,1)
+    """ Check whether 'self' shadows the ray at a segement start - end. Note, 
+    that :arg:delta should not be normalized. """
     length, aoa = self.intersect(start, delta * _SHADOWING_INDENT)
     return length > 0 and length < 1
 
-  # def intersect(self, start, end):
-    # """ Returns an intersection point of a ray specified by its `start` 
-    # and `direction` with the plane """
-    # direction = end - start
-    # tau = self._intersection_fraction(start, direction)
-    # return inf if tau == numpy.inf else start + tau * direction
-  
-  def grazing_angle(self, direction):
-    """ Returns a cosine of grazing angle for ray hitting towards `direction`"""
-    return numpy.abs(numpy.dot(direction, self._normal))
-
+  def normal(self, point=None):
+    """ Returns normal to the shape at a `point` """
+    return self._normal
 
   def project(self, point):
     """ Project a point on the plane """
@@ -162,10 +158,7 @@ class Plane(Shape):
   def reflect(self, point):
     """ Reflect a point from the plane """
     return point + 2 * self._distance_to(point) * self._normal
-  
-  def normal(self, point=None):
-    """ Returns normal to the shape at a `point` """
-    return self._normal
+
 
 
 def build(specs):
