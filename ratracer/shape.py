@@ -2,9 +2,9 @@
 'ratracer.shape' define all types of shapes for ray tracing to be used.
 Contains classes:
 
-  `.Identifiable` - 
+  :class:`.Identifiable` - 
       class defining local and brief ids for user's shapes.
-  `.Plane` - 
+  :class:`.Plane` - 
       a plane specified by its normal and some point on its surface,
       that can be treated as zero-point in 2D-coordinates on the plane.
 """
