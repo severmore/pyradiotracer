@@ -12,8 +12,8 @@ TOLERANCE = 1e-9
 
 
 # Radio signal utilities
-def to_log(value, tolerance=TOLERANCE):
-  return 10 * numpy.log10(value) if value > tolerance else -numpy.inf
+def to_log(value, tol=TOLERANCE):
+  return 10 * numpy.log10(value) if value > tol else -numpy.inf
 
 def to_linear(value): return numpy.exp(value / 10)
 def power(signal): return amplitude(signal) ** 2
@@ -28,7 +28,7 @@ class Reflectivity:
 
   def __init__(self, *, kind='fresnel', const_freq=True, frequency=1e9,
       permittivity=1, conductivity=.01, rvalue=-1.):
-    
+
     if kind == 'fresnel':
       self.frequency = frequency
       self.permittivity = permittivity
@@ -36,18 +36,18 @@ class Reflectivity:
       self.const_freq = const_freq
       self.eta = permittivity - 60j * LIGHT_SPEED / frequency * conductivity
       self._reflection_model = self._fresnel
-    
+
     elif kind == 'constant':
       self.rvalue = rvalue
       self._reflection_model = self._constant
-    
+
     else:
       raise Reflectivity.InvalidKind('should be "fresnel" or "constant"')
-    
+
 
   def _constant(self, aoa_cosine):
     return self.rvalue
-  
+
   def _fresnel(self, aoa_cosine, polarization=1., frequency=1e9):
 
     aoa_sine = sine(aoa_cosine)
@@ -62,7 +62,7 @@ class Reflectivity:
     r_prp = (aoa_sine - c_prp) / (aoa_sine + c_prp) if polarization !=1 else 0.j
 
     return polarization * r_prl + (1 - polarization) * r_prp
-  
+
   @staticmethod
   def create_constant(rvalue):
     return Reflectivity(kind='constant', rvalue=rvalue)
@@ -87,12 +87,12 @@ class RadiactionPattern:
     else:
       msg = 'kind should be "isotropic" or "dipole"'
       raise RadiactionPattern.InvalidKindException(msg)
-    
+
   def _isotropic(self, *args):
     return 1.0
-  
+
   def _dipole(self, ra_cos):
-    """ Radiation pattern of dipole. :param:`a_cos` (float) - cosine of an 
+    """ Radiation pattern of dipole. :param:`a_cos` (float) - cosine of an
     angle between radiating direction and antenna axis.
     """
     if ra_cos < TOLERANCE:
@@ -105,18 +105,18 @@ class RadiactionPattern:
     rt_sin = sine(rt_cos)
     kw = numpy.pi / self.wavelen * self.width
     kh = numpy.pi / self.wavelen * self.height
-    
+
     if ra_cos < TOLERANCE:
       return 0
     if numpy.abs(ra_sin) < TOLERANCE:
       return 1.
     elif numpy.abs(rt_sin) < TOLERANCE:
       return numpy.cos(kh * ra_sin)
-    
+
     return numpy.sin(kw * ra_sin * rt_sin) *  \
            numpy.cos(kh * ra_sin * rt_cos) /  \
                     (kw * ra_sin * rt_sin)
-               
+
   def _patch(self, ra_cos, rt_cos):
     return numpy.abs(_patch_factor(ra_cos, rt_cos)) * \
           (rt_cos ** 2 + ra_cos ** 2 * sine(rt_cos) ** 2) ** 0.5
@@ -142,23 +142,23 @@ class RFPlane(shape.Plane, Movable, RFAttenuator):
     Movable.__init__(self, velocity)
     RFAttenuator.__init__(self, reflectivity)
 
-  
+
 
 def build(specs):
   return (RFPlane(vec3d(*i), vec3d(*n)) for i, n in specs.items())
 
 class KRayPathloss:
-  
+
   def __init__(self, scene, frequency=1e9):
     """ Produce k-ray pathloss model based on the 'scene'. """
     self._tracer = Tracer(build(scene))
 
     self._frequency = frequency
     self._wavelen = LIGHT_SPEED / frequency
-    self._k = 2 * numpy.pi / self._wavelen 
+    self._k = 2 * numpy.pi / self._wavelen
 
     self._pathloss = 0
-  
+
   def __call__(self, tx, rx, max_reflections=2):
     """ Compute pathloss on propagation from `tx` to `rx`. """
     self.clear()
@@ -168,19 +168,19 @@ class KRayPathloss:
       length = sum(lens)
       reflectance = reduce(mul, self._r_att(sids, aoas), 1)
       self._pathloss += self._1ray_pathloss(length, reflectance)
-    
+
     return self._pathloss
-  
+
   def _r_att(self, sids, aoas):
     """ Get attenuation due to reflection from the shapes. """
     for sid, aoa in zip(sids, aoas):
       yield self._tracer.scene[sid].att(aoa)
-  
+
   def _1ray_pathloss(self, length, reflectance):
     """ Compute pathloss along a path. """
     kl = self._k * length
     return .5 / kl * numpy.exp(-1j * kl) * reflectance
-  
+
   def clear(self):
     """ Clear the results of previous pathloss evaluation. """
     self._pathloss = 0
@@ -204,5 +204,5 @@ if __name__ == '__main__':
 
   pathloss_model = KRayPathloss(scene)
   pathloss = pathloss_model(vec(0,0,5), vec(0,10,5), max_reflections=1)
-  
+
   print(to_log(power(pathloss)))

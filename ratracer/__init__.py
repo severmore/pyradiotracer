@@ -1,6 +1,6 @@
 __all__ = ['shape', 'tracer', 'utils', 'power']
 
 settings = {
-  'verbosity': True,
+  'verbosity': False,
   'vcolored': True,
 }

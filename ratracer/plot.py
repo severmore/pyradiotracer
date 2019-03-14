@@ -31,7 +31,7 @@ if __name__ == '__main__':
   pathloss = numpy.zeros(100)
 
   for i, d in enumerate(distance):
-    pl = pl_model(vec(0,0,5), vec(0,d,.5), max_reflections=1)
+    pl = pl_model(vec(0,0,5), vec(0,d,.5), max_reflections=0)
     pathloss[i] = radio.to_log(radio.power(pl))
 
   plt.figure(figsize=(4,3))
