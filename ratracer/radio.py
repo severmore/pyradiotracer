@@ -97,10 +97,10 @@ class RadiactionPattern:
     """
     if ra_cos < TOLERANCE:
       return 0.
-    ra_sin = get_sine(ra_cos)
+    ra_sin = sine(ra_cos)
     return numpy.abs(numpy.cos(numpy.pi / 2 * ra_sin) / ra_cos)
 
-  def _patch_factor(ra_cos, rt_cos):
+  def _patch_factor(self, ra_cos, rt_cos):
     ra_sin = sine(ra_cos)
     rt_sin = sine(rt_cos)
     kw = numpy.pi / self.wavelen * self.width
@@ -118,7 +118,7 @@ class RadiactionPattern:
                     (kw * ra_sin * rt_sin)
 
   def _patch(self, ra_cos, rt_cos):
-    return numpy.abs(_patch_factor(ra_cos, rt_cos)) * \
+    return numpy.abs(self._patch_factor(ra_cos, rt_cos)) * \
           (rt_cos ** 2 + ra_cos ** 2 * sine(rt_cos) ** 2) ** 0.5
 
 
@@ -191,9 +191,8 @@ class KRayPathloss:
     self._wavelen = LIGHT_SPEED / f
     self._k = 2 * numpy.pi / self.wavelen
 
-
 if __name__ == '__main__':
-  from utils import vec3d as vec
+  from ratracer.utils import vec3d as vec
 
   scene = {
     (0,0, 0): (0,0,1),

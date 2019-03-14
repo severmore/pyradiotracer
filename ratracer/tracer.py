@@ -1,5 +1,5 @@
 """
-'ratracer.tracer' contains an engine for ray-tracing based on mirrow reflection 
+'ratracer.tracer' contains an engine for ray-tracing based on mirrow reflection
 method. An example of usage:
 
   from ratracer import shape, tracer
@@ -13,7 +13,7 @@ method. An example of usage:
   tr = tracer.Tracer(shape.build(scene))
   paths, shapes_ids = tr(vec(0,0,5), vec(0,10,5), max_reflections=2)
 
-:class:`ratracer.tracer.Tracer` class implement MR-method. Note, such method is 
+:class:`ratracer.tracer.Tracer` class implement MR-method. Note, such method is
 useful to compute scene with specular reflecting shapes.
 """
 
@@ -30,11 +30,11 @@ SID_CODE = 2
 AOA_CODE = 3
 
 class Tracer:
-  """ Implements mirrow reflection method. Contains methods which are as 
+  """ Implements mirrow reflection method. Contains methods which are as
   follows:
 
     - :func:`__call__ - run ray-tracing for a scene
-    - :func:`clear` - clear results of previous tracer call; when tracer is 
+    - :func:`clear` - clear results of previous tracer call; when tracer is
         called, cleaning routine run automatically
     - :func:`get_shapes` - return generator that produces shapes stored in
         `self.scene` by the sequence of specified ids
@@ -50,29 +50,29 @@ class Tracer:
       self._temp = ([], [], [], [])
       self.start = None
       self.end = None
-    
+
     def __str__(self):
       paths = ('-'.join(str(bp) for bp in path) for path in self.paths())
       return "\n".join(paths)
-    
+
     def __len__(self):
       return len(self.trace)
 
     def append(self, *point):
       """ Append point traced right now to the building path. """
-      for p, v in zip(self._temp, point): 
+      for p, v in zip(self._temp, point):
         p.append(v)
-    
+
     def append_last(self, *last_point):
       """ Append the last traced point of the ray path. """
       self.append(*last_point)  # zip will skip `sid` and `aoa` parameters
       self.save()
       return self.trace[-1]
-    
+
     def clear(self):
       """ Clear currently built path. """
       self._temp = ([], [], [], [])
-    
+
     def path(self, idx):
       breaks = [self.start]
       for i in range(self.path_len(idx)):
@@ -84,7 +84,7 @@ class Tracer:
     def paths(self):
       """ Reconstruct breakpoint of traced paths. """
       return (self.path(idx) for idx in range(len(self.trace)))
-    
+
     def path_len(self, idx):
       """ Return the length of :arg:`idx`-th path traced. """
       return len(self.trace[idx][0])
@@ -104,8 +104,8 @@ class Tracer:
 
 
   def __init__(self, scene):
-    """ Performs ray tracing of a given :param:`scene`. Scene itself is a 
-    sequence of shapes located in module :mod:'ratracer.shape'. The tracing 
+    """ Performs ray tracing of a given :param:`scene`. Scene itself is a
+    sequence of shapes located in module :mod:'ratracer.shape'. The tracing
     based on mirrow reflection method and it is subject to specular relfections.
 
     Parameters
@@ -113,7 +113,7 @@ class Tracer:
     scene : list of `shape.Shape`
         A list of shape forming the scene to trace
     etype : subclass of `shape.Empty` (optional)
-        A class of empty shape being used inside tracing engine to skip some 
+        A class of empty shape being used inside tracing engine to skip some
         operations with shapes. Default value is `shape.Empty`.
 
     See Also
@@ -124,9 +124,9 @@ class Tracer:
     """
     self.scene = {shape.id: shape for shape in scene}
     self.result = Tracer.Result()
-  
+
   def __call__(self, start, end, max_reflections=2):
-    """ Build rays pathes from :arg:`start` to :arg:`end` with at most 
+    """ Build rays pathes from :arg:`start` to :arg:`end` with at most
     :arg:`max_reflections` reflections.
 
     Parameters
@@ -137,7 +137,7 @@ class Tracer:
         Ending point for rays
     max_reflections : int, optional
         Restict rays with a maximum number of reflection
-    
+
     Returns
     _______
     result: obj:`.Tracer.Result`
@@ -155,7 +155,7 @@ class Tracer:
 
     return self.result
 
-  
+
   def _trace_path(self, start, end, sid_sequence):
     """ Build a path from `start` to `end` via reflecting from `shapes` """
     _print__shapes(list(self.get_shapes(sid_sequence))) # TODO: take preparation into _print__
@@ -163,7 +163,7 @@ class Tracer:
     _print__images(images)
     path = self._i_compute_ray_path(start, end, images, sid_sequence)
     _print__traced_path(path, start)
-  
+
 
   def _i_compute_images(self, point, sid_sequence):
     """ Compute a sequence of images of `point` by subsequently reflecting from
@@ -184,24 +184,24 @@ class Tracer:
       if length is numpy.nan or self.is_shadowed(start, delta):
         self.result.clear()
         return None
-      
+
       start = start + delta
       self.result.append(direction, length, sid, aoa)
       _print__intersection(self.scene[sid], images[i], start)
-    
+
     delta = end - start
     length = norm(delta)
     direction = delta / length
     if self.is_shadowed(start, delta):
       self.result.clear()
       return None
-  
+
     return self.result.append_last(direction, length)
-  
+
   def get_shapes(self, sid_sequence):
     """ Get a generator of shapes stored in :param:`self.scene` by its ids. """
     return (self.scene[sid] for sid in sid_sequence)
-  
+
   def is_shadowed(self, start, delta):
     """ Check if ray with `start` and `end` shadowed by any shape of a scene """
     return any(shape.is_shadowing(start,delta) for shape in self.scene.values())
@@ -242,10 +242,10 @@ def _print__traced_path(path, start, *, color):
       breaks.append(start)
     print(f'traced path is {color(view(breaks))}')
 
-  
+
 
 if __name__ == '__main__':
-  from utils import vec3d as vec
+  from ratracer.utils import vec3d as vec
 
   scene = {
     (0,0, 0): (0,0,1),
@@ -258,7 +258,7 @@ if __name__ == '__main__':
   result = tracer_(vec(0,0,5), vec(0,10,5), max_reflections=1)
 
   print(result)
-  
+
   # @verbose('red')
   # def _sids(sids, *, color): return f'{color(view(sids, sep=" "))}'
   # def _shapes(sids): return view([tracer_.scene[s] for s in sids], sep=", ")
