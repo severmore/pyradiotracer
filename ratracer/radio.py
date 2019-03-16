@@ -14,7 +14,6 @@ TOLERANCE = 1e-9
 # Radio signal utilities
 def to_log(value, tol=TOLERANCE):
   return 10 * numpy.log10(value) if value > tol else -numpy.inf
-
 def to_linear(value): return numpy.exp(value / 10)
 def power(signal): return amplitude(signal) ** 2
 def phase(signal): return numpy.angle(signal)
@@ -35,23 +34,23 @@ class Reflectivity:
       self.conductivity = conductivity
       self.const_freq = const_freq
       self.eta = permittivity - 60j * LIGHT_SPEED / frequency * conductivity
-      self._reflection_model = self._fresnel
+      self._model = self._fresnel
 
     elif kind == 'constant':
       self.rvalue = rvalue
-      self._reflection_model = self._constant
+      self._model = self._constant
 
     else:
       raise Reflectivity.InvalidKind('should be "fresnel" or "constant"')
 
+  def __call__(self, aoa_cosine, *args):
+    return self._model(aoa_cosine, *args)
 
-  def _constant(self, aoa_cosine):
+  def _constant(self, aoa_cosine, *args):
     return self.rvalue
 
-  def _fresnel(self, aoa_cosine, polarization=1., frequency=1e9):
-
+  def _fresnel(self, aoa_cosine, polarization=1., frequency=1e9, *args):
     aoa_sine = sine(aoa_cosine)
-
     eta = self.eta if self.const_freq else \
         self.permittivity - 60j * LIGHT_SPEED / frequency * self.conductivity
 
@@ -63,36 +62,34 @@ class Reflectivity:
 
     return polarization * r_prl + (1 - polarization) * r_prp
 
-  @staticmethod
-  def create_constant(rvalue):
-    return Reflectivity(kind='constant', rvalue=rvalue)
 
+class AntennaPattern:
 
-class RadiactionPattern:
-
-  class InvalidKindException(Exception): pass
+  class InvalidKind(Exception): pass
 
   def __init__(self, *, kind='isotropic', wavelen=1e9, width=0., height=0.):
     if kind == 'isotropic':
-      self.pattern = self._isotropic
+      self._model = self._isotropic
     elif kind == 'dipole':
-      self.pattern = self._dipole
+      self._model = self._dipole
     elif kind == 'patch':
       # Complete this later
-      self.pattern = self._patch
+      self._model = self._patch
       self.wavelen = wavelen
       self.width = width
       self.height = height
       raise NotImplementedError('Patch antenna is not supported yet')
     else:
-      msg = 'kind should be "isotropic" or "dipole"'
-      raise RadiactionPattern.InvalidKindException(msg)
+      raise AntennaPattern.InvalidKind('kind should be "isotropic" or "dipole"')
+
+  def __call__(self, ra_cos, rt_cos=None):
+    return self._model(ra_cos, rt_cos)
 
   def _isotropic(self, *args):
     return 1.0
 
   def _dipole(self, ra_cos):
-    """ Radiation pattern of dipole. :param:`a_cos` (float) - cosine of an
+    """ Radiation pattern of dipole. :param:`ra_cos` (float) - cosine of an
     angle between radiating direction and antenna axis.
     """
     if ra_cos < TOLERANCE:
@@ -123,35 +120,46 @@ class RadiactionPattern:
 
 
 class RFAttenuator:
-  _DEFAULT_RVALUE = .9
 
-  def __init__(self, reflectivity=None):
-    self._reflectivity = reflectivity if reflectivity else \
-        Reflectivity.create_constant(RFAttenuator._DEFAULT_RVALUE)
+  def __init__(self, reflectivity):
+    self._reflectivity = reflectivity if reflectivity else Reflectivity()
 
-  def att(self, aoa):
-    return self._reflectivity._reflection_model(aoa)
+  def att(self, aoa, *args):
+    return self._reflectivity(aoa, *args)
 
 class Movable:
   def __init__(self, velocity=None):
-    self.velocity = velocity if velocity else zero
+    self.velocity = velocity if velocity is not None else zero
 
 class RFPlane(shape.Plane, Movable, RFAttenuator):
-  def __init__(self, init_point, normal, reflectivity=None, velocity=None):
+  def __init__(self, init_point, normal, velocity=None, reflectivity=None):
     shape.Plane.__init__(self, init_point, normal)
     Movable.__init__(self, velocity)
     RFAttenuator.__init__(self, reflectivity)
 
 
+class RFDevice:
+  def __init__(self, position, freq=1e9, *, pattern=None, ant_normal=None):
+    self.position = position
+    self.frequency = freq
+    self._pattern = pattern if pattern else AntennaPattern()
+    self._default_an = vec3d(1,0,0)
+    self.ant_normal = ant_normal if ant_normal is not None else self._default_an
 
-def build(specs):
-  return (RFPlane(vec3d(*i), vec3d(*n)) for i, n in specs.items())
+  def att(self, direction):
+    return self._pattern(numpy.dot(self.ant_normal, direction))
+
+
+def build(specs, freq):
+  reflector = Reflectivity(kind='constant', frequency=freq)
+  return (RFPlane(vec3d(*i), vec3d(*n), zero, reflector)
+          for i, n in specs.items())
 
 class KRayPathloss:
 
   def __init__(self, scene, frequency=1e9):
     """ Produce k-ray pathloss model based on the 'scene'. """
-    self._tracer = Tracer(build(scene))
+    self._tracer = Tracer(build(scene, frequency))
 
     self._frequency = frequency
     self._wavelen = LIGHT_SPEED / frequency
@@ -162,24 +170,27 @@ class KRayPathloss:
   def __call__(self, tx, rx, max_reflections=2):
     """ Compute pathloss on propagation from `tx` to `rx`. """
     self.clear()
-    result = self._tracer(tx, rx, max_reflections)
+    result = self._tracer(tx.position, rx.position, max_reflections)
 
-    for _, lens, sids, aoas in result.trace:
+    for dirs, lens, sids, aoas in result.trace:
       length = sum(lens)
       reflectance = reduce(mul, self._r_att(sids, aoas), 1)
-      self._pathloss += self._1ray_pathloss(length, reflectance)
+      pattern_att = tx.att(dirs[0]) * rx.att(dirs[-1])
+      print('k-ray-pathloss', length, reflectance, pattern_att)
+      self._pathloss += self._1ray_pathloss(length, reflectance, pattern_att)
 
     return self._pathloss
+
 
   def _r_att(self, sids, aoas):
     """ Get attenuation due to reflection from the shapes. """
     for sid, aoa in zip(sids, aoas):
       yield self._tracer.scene[sid].att(aoa)
 
-  def _1ray_pathloss(self, length, reflectance):
+  def _1ray_pathloss(self, length, reflectance, pattern_att):
     """ Compute pathloss along a path. """
     kl = self._k * length
-    return .5 / kl * numpy.exp(-1j * kl) * reflectance
+    return .5 / kl * numpy.exp(-1j * kl) * reflectance * pattern_att
 
   def clear(self):
     """ Clear the results of previous pathloss evaluation. """
@@ -191,6 +202,8 @@ class KRayPathloss:
     self._wavelen = LIGHT_SPEED / f
     self._k = 2 * numpy.pi / self.wavelen
 
+
+
 if __name__ == '__main__':
   from ratracer.utils import vec3d as vec
 
@@ -201,7 +214,9 @@ if __name__ == '__main__':
     # (-5,0,0): (1,0,0),
   }
 
+  transmitter = RFDevice(vec(0,0,5), 860e6, ant_normal=vec(0,1,0))
+  receiver = RFDevice(vec(0,10,5), 860e6, ant_normal=vec(0,-1,0))
   pathloss_model = KRayPathloss(scene)
-  pathloss = pathloss_model(vec(0,0,5), vec(0,10,5), max_reflections=1)
+  pathloss = pathloss_model(transmitter, receiver, max_reflections=1)
 
   print(to_log(power(pathloss)))
