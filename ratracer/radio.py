@@ -66,12 +66,20 @@ class Reflectivity:
 class AntennaPattern:
 
   class InvalidKind(Exception): pass
+  class InvalidSector(Exception): pass
+  MAX_SECTOR_WIDTH = numpy.pi
 
-  def __init__(self, *, kind='isotropic', wavelen=1e9, width=0., height=0.):
+  def __init__(self, *, kind='isotropic', wavelen=1e9, width=0., height=0.,
+                      sector_width=numpy.pi/3):
     if kind == 'isotropic':
       self._model = self._isotropic
     elif kind == 'dipole':
       self._model = self._dipole
+    elif kind == 'sector':
+      if sector_width > AntennaPattern.MAX_SECTOR_WIDTH:
+        raise AntennaPattern.InvalidSector('Sector width should be less pi')
+      self._sector_width = numpy.cos(sector_width / 2)
+      self._model = self._sector
     elif kind == 'patch':
       # Complete this later
       self._model = self._patch
@@ -86,9 +94,12 @@ class AntennaPattern:
     return self._model(ra_cos, rt_cos)
 
   def _isotropic(self, *args):
-    return 1.0
+    return 1.
 
-  def _dipole(self, ra_cos):
+  def _sector(self, ra_cos, *args):
+    return 1. if ra_cos > self._sector_width else 0.
+
+  def _dipole(self, ra_cos, *args):
     """ Radiation pattern of dipole. :param:`ra_cos` (float) - cosine of an
     angle between radiating direction and antenna axis.
     """
