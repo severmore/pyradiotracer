@@ -103,8 +103,9 @@ class AntennaPattern:
     """ Radiation pattern of dipole. :param:`ra_cos` (float) - cosine of an
     angle between radiating direction and antenna axis.
     """
-    if ra_cos < TOLERANCE:
-      return 0.
+    # print('dipole', ra_cos)
+    # if ra_cos < TOLERANCE:
+    #   return 0.
     ra_sin = sine(ra_cos)
     return numpy.abs(numpy.cos(numpy.pi / 2 * ra_sin) / ra_cos)
 
@@ -169,6 +170,9 @@ class RFDevice(Movable):
   def att(self, direction):
     return self._pattern(numpy.dot(self.ant_normal, direction))
 
+  def set_pattern(self, pattern):
+    self._pattern = pattern
+
 def build(specs, freq):
   reflector = Reflectivity(kind='constant', frequency=freq)
   return (RFPlane(vec3d(*i), vec3d(*n), zero, reflector)
@@ -189,16 +193,17 @@ class KRayPathloss:
   def __call__(self, tx, rx, max_reflections=2):
     """ Compute pathloss on propagation from `tx` position to `rx` position. """
     self.clear()
-    print('k-ray-coord', tx, rx)
+    # print('k-ray-coord', tx, rx)
     result = self._tracer(tx.position, rx.position, max_reflections)
 
     for dirs, lens, sids, aoas in result.trace:
       length = sum(lens)
       reflectance = reduce(mul, self._r_att(sids, aoas), 1)
       pattern_att = tx.att(dirs[0]) * rx.att(dirs[-1])
-      print('k-ray-pathloss', length, reflectance, pattern_att, tx.position, rx.position)
+      # print('k-ray-pathloss', length, reflectance, pattern_att)
       self._pathloss += self._1ray_pathloss(length, reflectance, pattern_att)
 
+    # print('k-ray:', to_log(power(self._pathloss)), rx.position[1])
     return self._pathloss
 
 

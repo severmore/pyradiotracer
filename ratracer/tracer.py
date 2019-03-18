@@ -16,7 +16,6 @@ method. An example of usage:
 :class:`ratracer.tracer.Tracer` class implement MR-method. Note, such method is
 useful to compute scene with specular reflecting shapes.
 """
-
 import itertools
 import numpy
 
@@ -33,7 +32,7 @@ class Tracer:
   """ Implements mirrow reflection method. Contains methods which are as
   follows:
 
-    - :func:`__call__ - run ray-tracing for a scene
+    - :func:`__call__` - run ray-tracing for a scene
     - :func:`clear` - clear results of previous tracer call; when tracer is
         called, cleaning routine run automatically
     - :func:`get_shapes` - return generator that produces shapes stored in

@@ -10,7 +10,7 @@ if sys.stdin.isatty():
 from matplotlib import pyplot as plt
 try:
   from jupyterthemes import jtplot
-  jtplot.style(theme='monokai', fscale=0.9)
+  jtplot.style(theme='monokai', fscale=0.9, figsize=(8,6))
 except:
   pass
 
@@ -48,6 +48,7 @@ class Pathloss:
     g0 = node_a.G(a0) * node_p.G(a0)
     g1 = node_a.G(a1) * node_p.G(a1)
     gd = gr(a1)
+    # print('tworay', g0, g1, gd)
     return self.K**2 * ((g0/d0)**2 + (g1*gd/d1)**2 +
                   2*(g0*g1*gd) / (d0*d1) * np.cos((d1-d0)/(2*self.K)))
 
@@ -60,18 +61,20 @@ if __name__ == '__main__':
 
   pl = Pathloss()
 
-  ox = np.arange(.1, 20, 0.1)
+  ox = np.linspace(0.1, 20, 1000)
   pl_los_iso = w2db(pl.los(ox, iso_reader, iso_tag))
   pl_2ray_iso = w2db(pl.tworay(ox, iso_reader, iso_tag))
   pl_2ray_dip = w2db(pl.tworay(ox, dip_reader, dip_tag))
+  # print(w2db(pl.tworay(ox, dip_reader, dip_tag)))
 
   fig = plt.figure()
   ax = plt.subplot(111)
   plt.plot(ox, pl_los_iso, 'y--', label='FSPL for isotropic antennas')
   plt.plot(ox, pl_2ray_iso, 'r', label='2-Ray PL for isotropic antennas')
   plt.plot(ox, pl_2ray_dip, 'b', label='2-Ray PL for dipole antennas')
-  ax.set_ybound(lower=-100, upper=-20)
+  ax.set_ybound(lower=-90, upper=-30)
   plt.legend()
+  plt.show()
 
 
 #%%

@@ -33,18 +33,26 @@ if __name__ == '__main__':
         pl_model(tx, rx.update_pos(y=d), max_reflections=maxr)
       ))
 
-  distance = numpy.linspace(1,20,100)
+  distance = numpy.linspace(.1,20,1000)
+  # distance = [19.47983983983984, 19.47985985985986]
+  # distance = [19.47983983983984]
   pl_los  = [log_att(d, maxr=0) for d in distance]
   pl_2ray = [log_att(d, maxr=1) for d in distance]
+  tx.set_pattern(radio.AntennaPattern(kind='dipole'))
+  rx.set_pattern(radio.AntennaPattern(kind='dipole'))
+  pl_2ray_dipole = [log_att(d, maxr=1) for d in distance]
 
+  # print(pl_2ray_dipole)
   # print([log_att(vec(0,0,5), vec(0,d,.5), maxr=1)
   #         for d in numpy.linspace(5,5.2,10)])
 
   plt.figure()
   ax = plt.subplot(111)
-  plt.plot(distance, pl_los)
-  plt.plot(distance, pl_2ray)
+  plt.plot(distance, pl_los, label='only LoS-component with isotropic antenna')
+  plt.plot(distance, pl_2ray, label='2-ray with isotropic antenna')
+  plt.plot(distance, pl_2ray_dipole, label='2-ray with dipole antenna')
   ax.set_ybound(upper=-30, lower=-90)
+  plt.legend()
   plt.show()
 
 #%%
