@@ -142,6 +142,12 @@ class Movable:
   def __init__(self, velocity=None):
     self.velocity = velocity if velocity is not None else zero
 
+  def update_pos(self, *, x=None, y=None, z=None):
+    for i, coord in enumerate([x,y,z]):
+      self.position[i] = coord if coord else self.position[i]
+    return self
+
+
 class RFPlane(shape.Plane, Movable, RFAttenuator):
   def __init__(self, init_point, normal, velocity=None, reflectivity=None):
     shape.Plane.__init__(self, init_point, normal)
@@ -149,7 +155,7 @@ class RFPlane(shape.Plane, Movable, RFAttenuator):
     RFAttenuator.__init__(self, reflectivity)
 
 
-class RFDevice:
+class RFDevice(Movable):
   def __init__(self, position, freq=1e9, *, pattern=None, ant_normal=None):
     self.position = position
     self.frequency = freq
@@ -157,9 +163,11 @@ class RFDevice:
     self._default_an = vec3d(1,0,0)
     self.ant_normal = ant_normal if ant_normal is not None else self._default_an
 
+  def __str__(self):
+    return f'{self.position}'
+
   def att(self, direction):
     return self._pattern(numpy.dot(self.ant_normal, direction))
-
 
 def build(specs, freq):
   reflector = Reflectivity(kind='constant', frequency=freq)
@@ -179,15 +187,16 @@ class KRayPathloss:
     self._pathloss = 0
 
   def __call__(self, tx, rx, max_reflections=2):
-    """ Compute pathloss on propagation from `tx` to `rx`. """
+    """ Compute pathloss on propagation from `tx` position to `rx` position. """
     self.clear()
+    print('k-ray-coord', tx, rx)
     result = self._tracer(tx.position, rx.position, max_reflections)
 
     for dirs, lens, sids, aoas in result.trace:
       length = sum(lens)
       reflectance = reduce(mul, self._r_att(sids, aoas), 1)
       pattern_att = tx.att(dirs[0]) * rx.att(dirs[-1])
-      print('k-ray-pathloss', length, reflectance, pattern_att)
+      print('k-ray-pathloss', length, reflectance, pattern_att, tx.position, rx.position)
       self._pathloss += self._1ray_pathloss(length, reflectance, pattern_att)
 
     return self._pathloss
