@@ -8,7 +8,7 @@ from ratracer.utils import zero, vec3d
 from ratracer.tracer import Tracer, view
 
 LIGHT_SPEED = 299792458. # mps
-TOLERANCE = 1e-9
+TOLERANCE = 1e-15
 
 
 # Radio signal utilities
@@ -239,8 +239,9 @@ if __name__ == '__main__':
     # (-5,0,0): (1,0,0),
   }
 
-  transmitter = RFDevice(vec(0,0,5), 860e6, ant_normal=vec(0,1,0))
-  receiver = RFDevice(vec(0,10,5), 860e6, ant_normal=vec(0,-1,0))
+  pattern = AntennaPattern(kind='dipole')
+  transmitter = RFDevice(vec(0,0,5), 860e6, pattern=pattern, ant_normal=vec(0,1,0))
+  receiver = RFDevice(vec(0,.1,.5), 860e6, pattern=pattern, ant_normal=vec(0,-1,0))
   pathloss_model = KRayPathloss(scene)
   pathloss = pathloss_model(transmitter, receiver, max_reflections=1)
 

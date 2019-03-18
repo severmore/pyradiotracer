@@ -34,17 +34,11 @@ if __name__ == '__main__':
       ))
 
   distance = numpy.linspace(.1,20,1000)
-  # distance = [19.47983983983984, 19.47985985985986]
-  # distance = [19.47983983983984]
   pl_los  = [log_att(d, maxr=0) for d in distance]
   pl_2ray = [log_att(d, maxr=1) for d in distance]
   tx.set_pattern(radio.AntennaPattern(kind='dipole'))
   rx.set_pattern(radio.AntennaPattern(kind='dipole'))
   pl_2ray_dipole = [log_att(d, maxr=1) for d in distance]
-
-  # print(pl_2ray_dipole)
-  # print([log_att(vec(0,0,5), vec(0,d,.5), maxr=1)
-  #         for d in numpy.linspace(5,5.2,10)])
 
   plt.figure()
   ax = plt.subplot(111)

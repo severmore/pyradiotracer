@@ -2,27 +2,15 @@
 import numpy as np
 from ratracer import radio
 
-import sys
-if sys.stdin.isatty():
-  import matplotlib
-  matplotlib.use('TkAgg')
-
-from matplotlib import pyplot as plt
-try:
-  from jupyterthemes import jtplot
-  jtplot.style(theme='monokai', fscale=0.9, figsize=(8,6))
-except:
-  pass
-
 isotropic_rp = lambda a: 1.0
 dipole_rp = lambda a: np.abs(np.cos(np.pi/2 * np.sin(a)) / np.cos(a))
 constant_r = lambda a: -1.0
 w2db = lambda w: 10.0 * np.log10(w)
 
 class Node:
-  def __init__(self, height, angle, rp=None):
+  def __init__(self, height, angle=None, rp=None):
     self.height = height
-    self.angle = angle
+    self.angle = angle if angle is not None else np.pi/2
     self.rp = rp if rp else dipole_rp
 
   def G(self, theta):
@@ -54,8 +42,20 @@ class Pathloss:
 
 if __name__ == '__main__':
 
-  iso_reader = Node(height=5, angle=np.pi/3, rp=isotropic_rp)
-  iso_tag = Node(height=0.5, angle=np.pi/2, rp=isotropic_rp)
+  import sys
+  if sys.stdin.isatty():
+    import matplotlib
+    matplotlib.use('TkAgg')
+
+  from matplotlib import pyplot as plt
+  try:
+    from jupyterthemes import jtplot
+    jtplot.style(theme='monokai', fscale=0.9, figsize=(8,6))
+  except:
+    pass
+
+  iso_reader = Node(height=5, rp=isotropic_rp)
+  iso_tag = Node(height=0.5, rp=isotropic_rp)
   dip_reader = Node(height=5, angle=np.pi/2)
   dip_tag = Node(height=.5, angle=np.pi/2)
 

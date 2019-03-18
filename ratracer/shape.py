@@ -13,7 +13,7 @@ from itertools import count
 
 from ratracer.utils import normalize, TOLERANCE, vec3d
 
-_SHADOWING_INDENT = 1 - TOLERANCE
+_SHADOWING_INDENT = TOLERANCE
 _SHADOWING_INDENT_INV = 1 - _SHADOWING_INDENT
 _NO_INTERSECTION = numpy.nan, numpy.nan
 
@@ -45,7 +45,7 @@ class Plane(Identifiable):
 
   def aoa_cosine(self, direction):
     """ Returns a cosine of grazing angle for ray hitting towards `direction`"""
-    return numpy.abs(_aoa_cosine(direction))
+    return numpy.abs(self._aoa_cosine(direction))
 
   def _distance_to(self, point):
     """ A signed distance between a `point` and the plane; a positive value
@@ -90,7 +90,7 @@ class Plane(Identifiable):
     """ Check whether 'self' shadows the ray at a segement start - end. Note,
     that :arg:delta should not be normalized. """
     length, _ = self.intersect(start, delta)
-    return length > _SHADOWING_INDENT_INV and length < _SHADOWING_INDENT
+    return length > _SHADOWING_INDENT and length < _SHADOWING_INDENT_INV
 
   def normal(self, point=None):
     """ Returns normal to the shape at a :arg:`point` (:arg:`point` is
